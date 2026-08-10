@@ -55,12 +55,23 @@ export const FieldLabel = styled.p`
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
+/**
+ * 카드 호버 시 오버레이를 노출한다.
+ * @emotion/babel-plugin 없이도 동작하도록 컴포넌트 셀렉터 대신 클래스명으로 연결한다.
+ */
+export const CARD_OVERLAY_CLASS = 'image-card-overlay';
+
 /** 100 × 100 이미지 카드 (Figma ImagePreviewCard) */
 export const ImageCard = styled.div`
   position: relative;
   width: 100px;
   height: 100px;
   flex-shrink: 0;
+
+  &:hover .${CARD_OVERLAY_CLASS} {
+    opacity: 1;
+  }
+
   border-radius: ${({ theme }) => theme.radius.md};
   overflow: hidden;
   background: ${({ theme }) => theme.colors.bgLight};
@@ -92,7 +103,6 @@ export const CardOverlay = styled.button`
   opacity: 0;
   transition: opacity 120ms ease-out;
 
-  ${ImageCard}:hover &,
   &:focus-visible {
     opacity: 1;
   }
