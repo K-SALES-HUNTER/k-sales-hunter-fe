@@ -1,6 +1,6 @@
 ## 🔍 What is the PR?
 
-<!-- PR 내용을 리스트로 작성-->
+<!-- PR 내용을 리스트로 작성 -->
 
 ## 📸 Screenshot
 
