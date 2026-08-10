@@ -35,8 +35,11 @@ interface SidebarProps {
 const Sidebar = ({ tree }: SidebarProps) => {
   const navigate = useNavigate();
   const { collapsed, toggle } = useSidebarStore();
-  // 1280px 경계에서 자동 접힘/펼침 (1 Depth·2 Depth 양쪽 모두 적용)
-  useResponsiveSidebar();
+  const hasTree = Boolean(tree);
+
+  // 1280px 경계 자동 접힘/펼침은 1 Depth에서만 (2 Depth는 트리가 주 내비게이션이라 제외)
+  useResponsiveSidebar({ enabled: !hasTree });
+
   const logout = useAuthStore((s) => s.logout);
   const [logoutModalOpen, setLogoutModalOpen] = useState(false);
 

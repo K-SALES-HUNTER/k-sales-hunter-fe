@@ -225,6 +225,8 @@ const Frame = styled.div`
   border-radius: ${({ theme }) => theme.radius.xl};
   overflow: hidden;
   background: ${({ theme }) => theme.colors.surface};
+  /* 사이드바·AI 패널 때문에 실제 폭이 뷰포트와 크게 달라 컨테이너 쿼리 기준으로 전환 */
+  container-type: inline-size;
 `;
 
 /* Shopee 상단 바 — 브랜드 오렌지는 테마 토큰 범위 내 error 색으로 대체 */
@@ -287,7 +289,7 @@ const TopSection = styled.div`
   gap: ${({ theme }) => theme.spacing.lg};
   align-items: flex-start;
 
-  ${({ theme }) => theme.media.tablet} {
+  @container (max-width: 640px) {
     flex-direction: column;
   }
 `;
@@ -299,7 +301,7 @@ const ImageColumn = styled.div`
   flex-direction: column;
   gap: ${({ theme }) => theme.spacing.xs};
 
-  ${({ theme }) => theme.media.tablet} {
+  @container (max-width: 640px) {
     width: 100%;
   }
 `;

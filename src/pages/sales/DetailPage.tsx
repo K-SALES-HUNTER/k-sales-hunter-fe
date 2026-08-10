@@ -226,10 +226,15 @@ const DetailBody = ({
   );
 };
 
+/* 미리보기 + 편집 패널 2단. 사이드바·AI 패널까지 겹치면 폭이 부족해 좁은 화면에서는 세로로 쌓는다 */
 const Columns = styled.div`
   display: flex;
   gap: ${({ theme }) => theme.spacing.lg};
   align-items: flex-start;
+
+  @media (max-width: 1439px) {
+    flex-direction: column;
+  }
 `;
 
 const PreviewColumn = styled.div`

@@ -100,6 +100,7 @@ const ProductImageUploader = ({ images, onAdd, onRemove }: ProductImageUploaderP
                 {index === 0 && <MainBadge>대표</MainBadge>}
                 <RemoveButton
                   type="button"
+                  className={REMOVE_BUTTON_CLASS}
                   aria-label="이미지 삭제"
                   onClick={() => onRemove(image.id)}
                 >
@@ -163,6 +164,12 @@ const PreviewGrid = styled.div`
   }
 `;
 
+/**
+ * 카드 호버 시 삭제 오버레이를 노출한다.
+ * @emotion/babel-plugin 없이도 동작하도록 컴포넌트 셀렉터 대신 클래스명으로 연결한다.
+ */
+const REMOVE_BUTTON_CLASS = 'preview-card-remove';
+
 const PreviewCard = styled.div`
   position: relative;
   display: flex;
@@ -173,6 +180,10 @@ const PreviewCard = styled.div`
   border-radius: ${({ theme }) => theme.radius.md};
   overflow: hidden;
   background: ${({ theme }) => theme.colors.bgLight};
+
+  &:hover .${REMOVE_BUTTON_CLASS} {
+    opacity: 1;
+  }
 `;
 
 /** 업로드 진행 바 (Figma I163:199;163:164 — 52x8, bg/gray 트랙 + main 채움) */
@@ -222,7 +233,6 @@ const RemoveButton = styled.button`
   opacity: 0;
   transition: opacity 120ms ease-out;
 
-  ${PreviewCard}:hover &,
   &:focus-visible {
     opacity: 1;
   }

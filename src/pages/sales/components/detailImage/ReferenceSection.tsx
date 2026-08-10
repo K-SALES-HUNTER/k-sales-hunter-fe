@@ -139,6 +139,7 @@ const ReferenceSection = ({
                   <img src={upload.src} alt={upload.label} />
                   <S.CardOverlay
                     type="button"
+                    className={S.CARD_OVERLAY_CLASS}
                     aria-label={`${upload.label} 삭제`}
                     onClick={() => onRemoveUpload(upload.id)}
                   >
