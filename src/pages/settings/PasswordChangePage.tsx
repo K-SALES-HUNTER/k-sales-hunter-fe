@@ -7,6 +7,7 @@ import Modal from '@/components/common/Modal';
 import { useChangePassword, useVerifyCurrentPassword } from '@/hooks/useSettings';
 import { PATH } from '@/routes/paths';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { resetDemoSession } from '@/stores/useDemoProgressStore';
 import { isValidPassword, PASSWORD_RULE_MESSAGE } from '@/utils/validation';
 import * as S from './PasswordChangePage.styled';
 
@@ -63,6 +64,8 @@ const PasswordChangePage = () => {
   const handleDone = () => {
     // 명세: 변경 성공 시 세션 만료 후 로그인 화면 이동 (재로그인 요구)
     logout();
+    // [DEMO-ONLY] 목 상태는 계정과 무관하게 세션에 남으므로 로그아웃 때 함께 비운다
+    resetDemoSession();
     navigate(PATH.LOGIN, { replace: true });
   };
 

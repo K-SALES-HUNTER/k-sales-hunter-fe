@@ -1,6 +1,14 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import { queryClient } from '@/apis/queryClient';
+import { persistConnectedStores, settingsState } from '@/mocks/settings';
 import type { CountryStage, Product, SalesStatus } from '@/types/product';
+import { useAiChatStore } from './useAiChatStore';
+import { useDetailImageStore } from './useDetailImageStore';
+import { useSalesOpsStore } from './useSalesOpsStore';
+
+/** 대시보드 환영 모달 노출 여부 키 — 초기화 대상이라 여기서 함께 관리한다 */
+export const WELCOME_DISMISSED_KEY = 'ksh-welcome-dismissed';
 
 /**
  * [DEMO-ONLY] 시연용 진행 상태 스토어 — 파일 전체가 시연 전용이다.
@@ -82,6 +90,36 @@ export const useDemoProgressStore = create<DemoProgressState>()(
     },
   ),
 );
+
+/**
+ * [DEMO-ONLY] 시연 상태를 전부 처음으로 되돌린다 — 로그아웃 시 호출.
+ *
+ * 목 상태가 계정과 무관하게 세션에 남아 있어서, 한 번 시연한 뒤 다른 계정으로 로그인하면
+ * 이미 상품이 등록되고 스토어가 연동된 화면이 나온다. 로그아웃을 초기화 지점으로 삼아
+ * 재촬영 때 시크릿 창을 새로 열지 않아도 되게 한다.
+ *
+ * 백엔드 연동 시: 이 함수와 호출부를 삭제한다 (서버가 계정별 데이터를 내려주므로 불필요).
+ */
+export const resetDemoSession = () => {
+  useDemoProgressStore.setState({ registeredProductIds: [], patchByKey: {} });
+  useAiChatStore.setState({ messages: [], replying: false });
+  useSalesOpsStore.setState({ statusByKey: {}, stockByProduct: {} });
+  useDetailImageStore.setState({ addedByKey: {}, replacedByKey: {}, removedByKey: {} });
+
+  // 모듈 레벨 목 상태 (연동 스토어·마켓 정보)
+  settingsState.stores = [];
+  persistConnectedStores([]);
+  settingsState.market = { brandDirection: '', sellerType: '', mainTarget: '', brandTone: '' };
+
+  try {
+    sessionStorage.removeItem(WELCOME_DISMISSED_KEY);
+  } catch {
+    // 저장소 접근 실패는 무시 — 메모리 상태만으로도 초기화된다
+  }
+
+  // 대시보드·상품 목록이 이전 계정의 응답을 캐시하고 있으므로 함께 비운다
+  queryClient.clear();
+};
 
 /** 진행 상태로부터 국가 카드의 단계를 되계산한다 (상세 페이지 > 판매 정보 > 보고서 순) */
 const resolveStage = (hasSalesInfo: boolean, hasDetailPage: boolean): CountryStage => {
