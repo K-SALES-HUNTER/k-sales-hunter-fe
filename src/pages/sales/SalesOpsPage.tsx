@@ -71,6 +71,15 @@ const SalesOpsPage = () => {
     setStopModalOpen(false);
   };
 
+  /** 월간 추이 차트 범례용 누적 합계 (상단 지표는 최근 30일이라 값이 다르다) */
+  const monthlyTotal = (ops?.performance.monthlyRevenue ?? []).reduce(
+    (acc, month) => ({
+      revenue: acc.revenue + month.revenue,
+      profit: acc.profit + month.profit,
+    }),
+    { revenue: 0, profit: 0 },
+  );
+
   return (
     <ProductShell
       product={product}
@@ -237,9 +246,12 @@ const SalesOpsPage = () => {
                 height={140}
                 formatValue={(v) => `₩${v.toLocaleString()}`}
               />
+              {/* 범례는 차트에 그려진 기간의 합계 — 상단 지표(최근 30일)와 기간이 다르다 */}
               <LegendRow>
-                <LegendItem>매출 {ops.performance.revenue}</LegendItem>
-                <LegendItem $tone="positive">순이익 {ops.performance.profit}</LegendItem>
+                <LegendItem>매출 ₩{monthlyTotal.revenue.toLocaleString()}</LegendItem>
+                <LegendItem $tone="positive">
+                  순이익 ₩{monthlyTotal.profit.toLocaleString()}
+                </LegendItem>
               </LegendRow>
             </div>
 

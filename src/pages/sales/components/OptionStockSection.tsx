@@ -27,7 +27,12 @@ interface StockCell {
  * 각 단계 저장 시 0.5초 로딩으로 다음 옵션을 Shopee에서 받아오는 흉내를 낸다.
  * 앞 단계를 수정하면 뒤 단계 저장 상태가 초기화된다 (단계 종속적).
  */
-const OptionStockSection = () => {
+interface OptionStockSectionProps {
+  /** [DEMO-ONLY] 재고까지 저장을 마쳤을 때 — 판매 정보 완료 처리 (백엔드 연동 시 제거) */
+  onSaved?: () => void;
+}
+
+const OptionStockSection = ({ onSaved }: OptionStockSectionProps) => {
   const [category, setCategory] = useState(shopeeCategoryDefaultMock);
   const [attrs, setAttrs] = useState<Record<string, string>>(() =>
     Object.fromEntries(categoryAttrsMock.map((a) => [a.key, a.value])),
@@ -66,6 +71,7 @@ const OptionStockSection = () => {
     setTimeout(() => {
       setSaving(null);
       setSaved((prev) => ({ ...prev, [step]: true }));
+      if (step === 'stock') onSaved?.();
     }, SALES_STEP_DELAY_MS);
   };
 
