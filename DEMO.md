@@ -29,8 +29,10 @@
 
 테이크를 다시 갈 때마다 **전부** 반복해야 합니다.
 
-- [ ] **시크릿 창을 새로 연다** (가장 확실한 초기화)
-      - 대안: 개발자도구 → Application → Storage → **Clear site data**
+- [ ] **초기화** — 아래 중 하나
+      - **좌측 하단 `로그아웃`** ← 가장 간단. 로그아웃 시 시연 상태가 전부 초기화됩니다
+      - 시크릿 창을 새로 연다
+      - 개발자도구 → Application → Storage → **Clear site data**
 - [ ] 창 폭 **1280px 이상** — 미만이면 사이드바가 접히고, 1024px 미만이면 AI 패널이 사라짐
 - [ ] 브라우저 확대율 **100%**
 - [ ] 북마크바 숨김, 알림·메신저 끄기
@@ -50,6 +52,10 @@
 
 > 진행 단계와 연동 상태를 세션에 남겨 두었기 때문에 **촬영 중 실수로 새로고침해도 흐름이 깨지지 않습니다.**
 > 다만 **탭을 닫으면 전부 사라집니다.**
+>
+> 이 상태들은 계정과 무관하게 세션에 저장되므로 **로그아웃 시 `resetDemoSession()`이 전부 비웁니다.**
+> 로그아웃 → 재로그인만으로 "신규 셀러" 상태로 돌아옵니다
+> (`stores/useDemoProgressStore.ts`, 호출부는 `Sidebar.tsx` · `PasswordChangePage.tsx`).
 
 ---
 
@@ -163,6 +169,7 @@ grep -rn "TODO(백엔드)\|TODO(다국어)" src/
 | 파일 | 대상 | 조치 |
 |---|---|---|
 | `stores/useDemoProgressStore.ts` | **파일 전체** | 삭제. 서버가 내려주는 `countries[].stage / hasSalesInfo / hasDetailPage / salesStatus`를 그대로 사용 |
+| `stores/useDemoProgressStore.ts` | `resetDemoSession` · `WELCOME_DISMISSED_KEY` | 삭제. 호출부는 `Sidebar.tsx`·`PasswordChangePage.tsx` 각 1줄, `WELCOME_DISMISSED_KEY`는 `DashboardPage.tsx`로 되돌린다 |
 | `mocks/products.ts` | `DEMO_PRODUCT_ID` · `DEMO_COUNTRY_CODE` · `PENDING_PRODUCT_IDS` | 삭제 |
 | `mocks/dashboard.ts` | `dashboardSummaryAfterSalesMock` | 삭제 (요약이 한 벌로 통합됨) |
 | `mocks/settings.ts` | `CONNECTED_STORES_KEY` · `loadConnectedStores` · `persistConnectedStores` | 삭제 |
