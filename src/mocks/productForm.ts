@@ -25,9 +25,9 @@ export const CATEGORY_OPTIONS: CategoryOption[] = [
  * 비어 있는 항목에만 채워지고, 사용자가 입력한 값은 덮어쓰지 않는다.
  */
 export const AI_FILL_MOCK = {
-  category: '뷰티',
+  category: '캐릭터·굿즈',
   description:
-    'K-뷰티 트렌드를 반영한 데일리 아이템입니다. 순한 성분과 산뜻한 사용감으로 매일 부담 없이 사용할 수 있어요.',
-  sellingPoints: '저자극 성분 · 데일리 사용 가능 · 휴대하기 좋은 사이즈 · 합리적인 가격',
-  mainTarget: 'K-뷰티에 관심 많은 동남아 20~30대 여성',
+    '한국 캐릭터 브랜드 말랑 프렌즈의 정품 플러시 인형입니다. 극세사 원단으로 만들어 촉감이 부드럽고, 네 가지 캐릭터를 20cm·30cm 두 사이즈로 고를 수 있습니다.',
+  sellingPoints: '한국 정품 캐릭터 굿즈 · 극세사 플러시 원단 · 4가지 캐릭터 · 소장·선물용 패키지',
+  mainTarget: 'K-캐릭터 굿즈를 수집하는 동남아 10~20대',
 } as const;
