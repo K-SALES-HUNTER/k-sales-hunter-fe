@@ -46,13 +46,18 @@ const SalesInfoPage = () => {
 
   if (!product) return <LoadingText>판매 정보를 불러오는 중…</LoadingText>;
 
+  // Figma: 국가 컨텍스트 화면의 헤더 제목은 '{국가} 보고서'로 고정하고, 하위 페이지는 탭으로 구분한다
+  const countryTitle = `${
+    product.countries.find((c) => c.code === countryCode)?.name ?? countryCode
+  } 보고서`;
+
   const methods = salesInfo?.shippingMethods ?? shippingMethodsMock;
   const shippingCostKrw = methods.find((m) => m.id === shippingMethod)?.costKrw ?? 0;
 
   return (
     <ProductShell
       product={product}
-      title="판매 정보"
+      title={countryTitle}
       backTo={buildPath.countryReport(productId, countryCode)}
       countryCode={countryCode}
       recommendedPrompts={RECOMMENDED_PROMPTS}

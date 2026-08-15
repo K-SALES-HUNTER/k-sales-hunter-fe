@@ -12,7 +12,8 @@ export const SHOPEE_COUNTRIES: ShopeeCountry[] = [
   { code: 'PH', name: '필리핀' },
   { code: 'TH', name: '태국' },
   { code: 'AR', name: '아르헨티나' },
-  { code: 'SG', name: '싱가포르' },
+  // Figma 표기 그대로 '싱가폴' — 다른 화면(보고서·국가 카드)은 '싱가포르'를 쓴다
+  { code: 'SG', name: '싱가폴' },
   { code: 'LA', name: '라오스' },
 ];
 
@@ -48,12 +49,47 @@ export const WRONG_PASSWORD_MOCK = 'wrong';
  */
 const CONNECTED_STORES_KEY = 'ksh-connected-stores';
 
+/**
+ * 시연 시작 시점의 연동 상태 — 이미 3개국에서 활동 중인 기존 셀러를 전제로 한다.
+ * 그래서 시연에서 마켓 설정·Shopee 연동 단계를 거치지 않는다.
+ */
+export const INITIAL_CONNECTED_STORES: ConnectedStore[] = [
+  {
+    countryCode: 'SG',
+    countryName: '싱가포르',
+    storeName: 'MALLANG STUDIO',
+    connectedAt: '2026-03-04',
+  },
+  {
+    countryCode: 'TH',
+    countryName: '태국',
+    storeName: 'MALLANG STUDIO',
+    connectedAt: '2026-03-04',
+  },
+  {
+    countryCode: 'VN',
+    countryName: '베트남',
+    storeName: 'MALLANG STUDIO',
+    connectedAt: '2026-05-21',
+  },
+];
+
+/** 시연 시작 시점의 마켓 정보 — 이미 작성해 둔 상태 */
+export const INITIAL_MARKET_INFO: MarketInfo = {
+  brandDirection: 'K-트렌드',
+  sellerType: '1인 셀러',
+  mainTarget: 'K-캐릭터 굿즈와 K-뷰티를 수집하는 동남아 10~20대',
+  brandTone: '밝고 귀여운, 소장 욕구를 자극하는 톤',
+};
+
+const cloneStores = () => INITIAL_CONNECTED_STORES.map((store) => ({ ...store }));
+
 const loadConnectedStores = (): ConnectedStore[] => {
   try {
     const raw = sessionStorage.getItem(CONNECTED_STORES_KEY);
-    return raw ? (JSON.parse(raw) as ConnectedStore[]) : [];
+    return raw ? (JSON.parse(raw) as ConnectedStore[]) : cloneStores();
   } catch {
-    return [];
+    return cloneStores();
   }
 };
 
@@ -79,12 +115,7 @@ export const settingsState: {
     marketName: 'MALLANG STUDIO',
     businessNumber: '1234567890',
   },
-  market: {
-    brandDirection: '',
-    sellerType: '',
-    mainTarget: '',
-    brandTone: '',
-  },
-  // 신규 셀러 — 연동된 스토어가 없는 상태에서 시작한다 (대시보드 환영 모달 → 판매 국가 연동)
+  market: { ...INITIAL_MARKET_INFO },
+  // 기존 셀러 — 3개국 스토어가 이미 연동돼 있어 환영 모달이 뜨지 않는다
   stores: loadConnectedStores(),
 };

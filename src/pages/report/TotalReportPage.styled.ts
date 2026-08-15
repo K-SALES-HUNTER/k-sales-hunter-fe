@@ -166,10 +166,6 @@ export const RevenueValue = styled.strong`
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
-export const RevenueShare = styled.span`
-  ${({ theme }) => theme.typography.caption01};
-  color: ${({ theme }) => theme.colors.textSecondary};
-`;
 
 /** 국가별 판매 관리 이동 버튼 (Figma 577:15376) — main/light 배경 + 우측 화살표 */
 export const RowButton = styled.button`
