@@ -6,13 +6,12 @@ import Button from '@/components/common/Button';
 import PageHeader from '@/components/layout/PageHeader';
 import { useDashboardSummary, useHasLinkedMarket, useRecentProducts } from '@/hooks/useDashboard';
 import { PATH } from '@/routes/paths';
+// 환영 모달은 세션당 1번만 노출 — 키는 로그아웃 초기화 대상이라 스토어 쪽에서 함께 관리한다
+import { WELCOME_DISMISSED_KEY } from '@/stores/useDemoProgressStore';
 import OverviewSection from './components/OverviewSection';
 import RecentProductsSection from './components/RecentProductsSection';
 import WelcomeModal from './components/WelcomeModal';
 import * as S from './DashboardPage.styled';
-
-/** 환영 모달은 세션당 1번만 노출 */
-const WELCOME_DISMISSED_KEY = 'ksh-welcome-dismissed';
 
 /** dashboard (Figma 221:613) */
 const DashboardPage = () => {

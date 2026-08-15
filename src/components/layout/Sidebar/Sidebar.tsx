@@ -14,6 +14,7 @@ import Modal from '@/components/common/Modal';
 import { useResponsiveSidebar } from '@/hooks/useResponsiveSidebar';
 import { PATH } from '@/routes/paths';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { resetDemoSession } from '@/stores/useDemoProgressStore';
 import { useSidebarStore } from '@/stores/useSidebarStore';
 import * as S from './Sidebar.styled';
 
@@ -45,6 +46,8 @@ const Sidebar = ({ tree }: SidebarProps) => {
 
   const handleLogout = () => {
     logout();
+    // [DEMO-ONLY] 목 상태는 계정과 무관하게 세션에 남으므로 로그아웃 때 함께 비운다
+    resetDemoSession();
     navigate(PATH.LOGIN, { replace: true });
   };
 
