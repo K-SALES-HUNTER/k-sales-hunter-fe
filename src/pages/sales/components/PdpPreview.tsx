@@ -11,7 +11,51 @@ interface PdpPreviewProps {
   mainImageId: string;
   detailImages: DetailImageItem[];
   countryName: string;
+  /** 미리보기 언어 — 실제 Shopee 화면과 같게 보이도록 고정 문구까지 함께 전환한다 */
+  language: 'ko' | 'local';
 }
+
+/**
+ * Shopee 화면의 고정 문구 — 상품 데이터가 아니라 플랫폼 UI 텍스트라 별도로 번역한다.
+ * 현지 언어 보기에서 이 문구들이 한국어로 남아 있으면 실제 업로드 결과와 달라 보인다.
+ *
+ * TODO(다국어): 현재는 베트남어만 있다. 싱가포르(영어)·태국(태국어)까지 판매 국가가 늘면
+ * 국가 코드별 사전으로 바꾸고 language prop도 국가 코드를 받도록 확장한다.
+ */
+const LABELS = {
+  ko: {
+    shipping: '배송',
+    shippingFee: '배송비',
+    eta: '도착 예정',
+    qty: '수량',
+    qtyDown: '수량 감소',
+    qtyUp: '수량 증가',
+    cart: '장바구니 담기',
+    buy: '바로 구매',
+    seller: '판매자 정보',
+    rating: '평점',
+    response: '응답률',
+    followers: '팔로워',
+    specs: '상품 사양',
+    breadcrumbLabel: '카테고리 경로',
+  },
+  local: {
+    shipping: 'Vận chuyển',
+    shippingFee: 'Phí vận chuyển',
+    eta: 'Dự kiến nhận hàng',
+    qty: 'Số lượng',
+    qtyDown: 'Giảm số lượng',
+    qtyUp: 'Tăng số lượng',
+    cart: 'Thêm vào giỏ hàng',
+    buy: 'Mua ngay',
+    seller: 'Thông tin người bán',
+    rating: 'Đánh giá',
+    response: 'Tỉ lệ phản hồi',
+    followers: 'Người theo dõi',
+    specs: 'Thông số sản phẩm',
+    breadcrumbLabel: 'Đường dẫn danh mục',
+  },
+} as const;
 
 /** 이미지 원본 다운로드 (상세 이미지 우측 상단 아이콘 버튼) */
 const downloadImage = (src: string, filename: string) => {
@@ -32,7 +76,9 @@ const PdpPreview = ({
   mainImageId,
   detailImages,
   countryName,
+  language,
 }: PdpPreviewProps) => {
+  const t = LABELS[language];
   const [selectedThumbId, setSelectedThumbId] = useState<string | null>(null);
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const [qty, setQty] = useState(1);
@@ -49,7 +95,7 @@ const PdpPreview = ({
       </TopBar>
 
       <Body>
-        <Breadcrumb aria-label="카테고리 경로">
+        <Breadcrumb aria-label={t.breadcrumbLabel}>
           {content.breadcrumb.map((crumb, index) => (
             <li key={crumb}>
               {index > 0 && <Sep aria-hidden>›</Sep>}
@@ -94,15 +140,15 @@ const PdpPreview = ({
 
             <ShippingBox>
               <ShippingRow>
-                <dt>배송</dt>
+                <dt>{t.shipping}</dt>
                 <dd>{content.shipping.region}</dd>
               </ShippingRow>
               <ShippingRow>
-                <dt>배송비</dt>
+                <dt>{t.shippingFee}</dt>
                 <dd>{content.shipping.fee}</dd>
               </ShippingRow>
               <ShippingRow>
-                <dt>도착 예정</dt>
+                <dt>{t.eta}</dt>
                 <dd>{content.shipping.eta}</dd>
               </ShippingRow>
             </ShippingBox>
@@ -132,11 +178,11 @@ const PdpPreview = ({
             ))}
 
             <QtyRow>
-              <OptionLabel>수량</OptionLabel>
+              <OptionLabel>{t.qty}</OptionLabel>
               <Stepper>
                 <StepButton
                   type="button"
-                  aria-label="수량 감소"
+                  aria-label={t.qtyDown}
                   onClick={() => setQty((q) => Math.max(1, q - 1))}
                 >
                   −
@@ -144,7 +190,7 @@ const PdpPreview = ({
                 <StepValue>{qty}</StepValue>
                 <StepButton
                   type="button"
-                  aria-label="수량 증가"
+                  aria-label={t.qtyUp}
                   onClick={() => setQty((q) => q + 1)}
                 >
                   +
@@ -155,37 +201,37 @@ const PdpPreview = ({
 
             <BuyRow>
               {/* 미리보기 용도 — 실제 구매 동작 없음 */}
-              <CartButton type="button">장바구니 담기</CartButton>
-              <BuyButton type="button">바로 구매</BuyButton>
+              <CartButton type="button">{t.cart}</CartButton>
+              <BuyButton type="button">{t.buy}</BuyButton>
             </BuyRow>
           </InfoColumn>
         </TopSection>
 
         <SellerCard>
-          <BlockTitle>판매자 정보</BlockTitle>
+          <BlockTitle>{t.seller}</BlockTitle>
           <SellerRow>
             <SellerAvatar aria-hidden />
             <SellerInfo>
               <strong>{seller.name}</strong>
-              <span>{seller.meta}</span>
+              <span>{language === 'ko' ? seller.meta : seller.metaLocal}</span>
             </SellerInfo>
             <SellerStat>
               <strong>{seller.rating}</strong>
-              <span>평점</span>
+              <span>{t.rating}</span>
             </SellerStat>
             <SellerStat>
               <strong>{seller.response}</strong>
-              <span>응답률</span>
+              <span>{t.response}</span>
             </SellerStat>
             <SellerStat>
               <strong>{seller.followers}</strong>
-              <span>팔로워</span>
+              <span>{t.followers}</span>
             </SellerStat>
           </SellerRow>
         </SellerCard>
 
         <SpecCard>
-          <BlockTitle>상품 사양</BlockTitle>
+          <BlockTitle>{t.specs}</BlockTitle>
           <SpecTable>
             <tbody>
               {content.specs.map(([label, value]) => (

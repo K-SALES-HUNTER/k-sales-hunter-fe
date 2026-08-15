@@ -12,7 +12,7 @@ export const SHOPEE_COUNTRIES: ShopeeCountry[] = [
   { code: 'PH', name: '필리핀' },
   { code: 'TH', name: '태국' },
   { code: 'AR', name: '아르헨티나' },
-  { code: 'SG', name: '싱가폴' },
+  { code: 'SG', name: '싱가포르' },
   { code: 'LA', name: '라오스' },
 ];
 
@@ -41,6 +41,31 @@ export const SELLER_TYPE_OPTIONS = [
 export const WRONG_PASSWORD_MOCK = 'wrong';
 
 /**
+ * [DEMO-ONLY] 연동 스토어는 세션에 보존한다 — 모듈 변수만 쓰면 새로고침 한 번에 연동이 풀려,
+ * 연동 이후 화면(상세 페이지 업로드 등)이 갑자기 미연동 상태로 되돌아간다.
+ * 촬영 중 실수로 새로고침해도 흐름이 깨지지 않게 하기 위한 장치다.
+ * 백엔드 연동 시: sessionStorage 관련 코드를 전부 삭제하고 서버 조회로 대체한다.
+ */
+const CONNECTED_STORES_KEY = 'ksh-connected-stores';
+
+const loadConnectedStores = (): ConnectedStore[] => {
+  try {
+    const raw = sessionStorage.getItem(CONNECTED_STORES_KEY);
+    return raw ? (JSON.parse(raw) as ConnectedStore[]) : [];
+  } catch {
+    return [];
+  }
+};
+
+export const persistConnectedStores = (stores: ConnectedStore[]) => {
+  try {
+    sessionStorage.setItem(CONNECTED_STORES_KEY, JSON.stringify(stores));
+  } catch {
+    // 저장 실패는 무시 — 메모리 상태만으로도 동작한다
+  }
+};
+
+/**
  * 설정 목 상태 — 백엔드 연동 전까지 모듈 레벨에서 유지한다.
  * 저장/연동/해제는 apis/settings.ts를 통해 이 상태를 갱신한다.
  */
@@ -51,7 +76,7 @@ export const settingsState: {
 } = {
   account: {
     email: 'seller@ksaleshunter.com',
-    marketName: 'BlueWave_Shop',
+    marketName: 'MALLANG STUDIO',
     businessNumber: '1234567890',
   },
   market: {
@@ -60,13 +85,6 @@ export const settingsState: {
     mainTarget: '',
     brandTone: '',
   },
-  // 기본 연동: 태국 1건
-  stores: [
-    {
-      countryCode: 'TH',
-      countryName: '태국',
-      storeName: 'BlueWave_Shop',
-      connectedAt: '2026-03-04',
-    },
-  ],
+  // 신규 셀러 — 연동된 스토어가 없는 상태에서 시작한다 (대시보드 환영 모달 → 판매 국가 연동)
+  stores: loadConnectedStores(),
 };

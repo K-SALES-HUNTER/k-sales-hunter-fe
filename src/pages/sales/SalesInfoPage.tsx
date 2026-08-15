@@ -6,6 +6,7 @@ import { useProduct } from '@/hooks/useProducts';
 import { useSalesInfo } from '@/hooks/useSales';
 import { shippingMethodsMock, type ShippingMethodId } from '@/mocks/sales';
 import { buildPath } from '@/routes/paths';
+import { useDemoProgressStore } from '@/stores/useDemoProgressStore';
 import OptionStockSection from './components/OptionStockSection';
 import PriceSection from './components/PriceSection';
 import SectionTabs from './components/SectionTabs';
@@ -35,6 +36,13 @@ const SalesInfoPage = () => {
 
   // 배송 방식 — AI 추천 기본 선택. 변경 시 판매가 섹션 수익 지표 재계산
   const [shippingMethod, setShippingMethod] = useState<ShippingMethodId>(AI_RECOMMENDED_METHOD);
+
+  /**
+   * [DEMO-ONLY] 재고 또는 포장 정보를 저장하면 판매 정보가 확정된 것으로 보고, 상세 페이지 생성을 연다.
+   * 백엔드 연동 시: 저장 API 성공 응답으로 상품 상태가 갱신되므로 이 콜백과 onSaved prop을 삭제한다.
+   */
+  const markSalesInfoSaved = useDemoProgressStore((s) => s.markSalesInfoSaved);
+  const handleSaved = () => markSalesInfoSaved(productId, countryCode);
 
   if (!product) return <LoadingText>판매 정보를 불러오는 중…</LoadingText>;
 
@@ -66,9 +74,14 @@ const SalesInfoPage = () => {
         />
       )}
 
-      <OptionStockSection />
+      <OptionStockSection onSaved={handleSaved} />
 
-      <ShippingSection methods={methods} value={shippingMethod} onChange={setShippingMethod} />
+      <ShippingSection
+        methods={methods}
+        value={shippingMethod}
+        onChange={setShippingMethod}
+        onSaved={handleSaved}
+      />
     </ProductShell>
   );
 };

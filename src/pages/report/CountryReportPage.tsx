@@ -6,6 +6,7 @@ import ProductShell from '@/components/layout/ProductShell';
 import { useCountryReport } from '@/hooks/useReport';
 import { useProduct } from '@/hooks/useProducts';
 import { buildPath } from '@/routes/paths';
+import { useDemoProgressStore } from '@/stores/useDemoProgressStore';
 import CompetitionSection from './components/CompetitionSection';
 import MetricRow from './components/MetricRow';
 import PricingSection from './components/PricingSection';
@@ -45,13 +46,17 @@ const CountryReportPage = () => {
   // TODO: 상세 페이지 생성 시 AI 로딩 오버레이(파이프라인 진행 화면)로 교체 예정 —
   // 현재는 버튼 로딩 1.5초 후 이동으로 간단 구현
   const [generating, setGenerating] = useState(false);
+  const markDetailPageCreated = useDemoProgressStore((s) => s.markDetailPageCreated);
   useEffect(() => {
     if (!generating || !countryCode) return;
     const timer = setTimeout(() => {
+      // [DEMO-ONLY] 생성이 끝나야 상단 '상세 페이지' 탭이 열린다.
+      // 백엔드 연동 시: 상세페이지 생성 API 응답으로 상태가 갱신되므로 이 호출은 삭제한다.
+      markDetailPageCreated(productId, countryCode);
       navigate(buildPath.detailPage(productId, countryCode));
     }, 1500);
     return () => clearTimeout(timer);
-  }, [generating, productId, countryCode, navigate]);
+  }, [generating, productId, countryCode, navigate, markDetailPageCreated]);
 
   if (!product) return <S.PageLoading>보고서를 불러오는 중…</S.PageLoading>;
 
@@ -104,14 +109,19 @@ const CountryReportPage = () => {
     >
       <S.PageTop>
         <S.PageTitle>{report.name} 분석 결과</S.PageTitle>
-        {/* 헤더 CTA — 판매 정보 입력 완료(hasSalesInfo) 시에만 활성 (RPT-02-01 #3) */}
+        {/* 헤더 CTA — 판매 정보 입력 완료(hasSalesInfo) 시에만 활성 (RPT-02-01 #3).
+            이미 생성된 뒤에는 다시 만들지 않고 해당 페이지로 이동한다 */}
         <Button
           variant="primary"
           disabled={!country.hasSalesInfo}
           loading={generating}
-          onClick={() => setGenerating(true)}
+          onClick={() =>
+            country.hasDetailPage
+              ? navigate(buildPath.detailPage(productId, country.code))
+              : setGenerating(true)
+          }
         >
-          상세 페이지 생성
+          {country.hasDetailPage ? '상세 페이지 확인' : '상세 페이지 생성'}
         </Button>
       </S.PageTop>
 

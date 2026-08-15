@@ -21,6 +21,33 @@ interface FieldChange {
   after: string;
 }
 
+/**
+ * 항목별 재분석 영향 (오케스트레이터 부분 재실행 의존 관계 R-000-05).
+ * 어떤 값을 고치면 어떤 계산이 다시 돌아가는지를 그대로 문장으로 옮긴 것이라,
+ * 새로운 수치를 지어내지 않고도 변경의 의미를 설명할 수 있다.
+ *
+ * TODO(백엔드): 재실행 의존 매트릭스는 서버가 갖고 있으므로, 연동 시 변경 요청 응답의
+ * 영향 필드를 받아 이 상수를 대체한다. 프론트 단독 동작이 필요 없어지면 삭제.
+ */
+const CHANGE_IMPACTS: Record<string, string> = {
+  '공급 원가': '국가별 마진과 손익분기 판매량이 다시 계산됩니다',
+  무게: '국제 배송비와 수입 VAT 과세표준이 다시 계산됩니다',
+  카테고리: '경쟁 상품 비교 대상과 Shopee 카테고리 속성이 다시 매칭됩니다',
+  상품명: '현지화 상세 페이지의 상품명이 다시 생성됩니다',
+  '상품 설명': '현지화 상세 페이지 문구가 다시 생성됩니다',
+  '셀링 포인트': '현지화 상세 페이지 문구가 다시 생성됩니다',
+  '메인 타겟': '시장 수요 분석의 타겟 기준이 다시 적용됩니다',
+  '상품 이미지': '상세 페이지 대표 이미지 구성이 갱신됩니다',
+};
+
+/** 변경 내역을 한 문장으로 요약 (전략 코파일럿 R-005 — 계산은 코드, 설명만 생성) */
+const summarizeChanges = (changes: FieldChange[]) => {
+  const impacts = [...new Set(changes.map((c) => CHANGE_IMPACTS[c.label]).filter(Boolean))];
+  if (impacts.length === 0) return '변경한 내용은 분석 결과에 영향을 주지 않습니다.';
+  const fields = changes.map((c) => c.label).join('·');
+  return `${fields} 항목을 수정해 ${impacts.join(', ')}. 다시 계산되는 동안 이전 보고서는 그대로 열람할 수 있습니다.`;
+};
+
 const toFormValues = (product: Product): ProductFormValues => ({
   name: product.name,
   category: product.category,
@@ -171,6 +198,7 @@ const ProductEditView = ({ product }: { product: Product }) => {
           <Modal
             open
             title="아래 데이터가 변경되었습니다."
+            description={summarizeChanges(changes)}
             footer={
               <Button variant="primary" fullWidth onClick={() => navigate(-1)}>
                 확인

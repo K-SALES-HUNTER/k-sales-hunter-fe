@@ -20,6 +20,8 @@ interface ShippingSectionProps {
   /** 판매 중단 상태 등 판매 중 전용 조작 비활성 */
   disabled?: boolean;
   id?: string;
+  /** [DEMO-ONLY] 포장 정보 저장 완료 — 판매 정보 완료 처리 (백엔드 연동 시 제거) */
+  onSaved?: () => void;
 }
 
 /**
@@ -32,6 +34,7 @@ const ShippingSection = ({
   onChange,
   disabled = false,
   id = 'section-shipping',
+  onSaved,
 }: ShippingSectionProps) => {
   const [packaging, setPackaging] = useState({
     weight: String(packagingMock.weight),
@@ -46,7 +49,10 @@ const ShippingSection = ({
 
   const savePackaging = () => {
     setSaving(true);
-    setTimeout(() => setSaving(false), SALES_STEP_DELAY_MS);
+    setTimeout(() => {
+      setSaving(false);
+      onSaved?.();
+    }, SALES_STEP_DELAY_MS);
   };
 
   return (

@@ -1,4 +1,9 @@
-import { SHOPEE_COUNTRIES, settingsState, WRONG_PASSWORD_MOCK } from '@/mocks/settings';
+import {
+  persistConnectedStores,
+  SHOPEE_COUNTRIES,
+  settingsState,
+  WRONG_PASSWORD_MOCK,
+} from '@/mocks/settings';
 import type { AccountInfo, ConnectedStore, JoinPayload, MarketInfo } from '@/types/settings';
 
 const MOCK_DELAY_MS = 300;
@@ -44,6 +49,8 @@ export const connectStore = (countryCode: string): Promise<ConnectedStore> => {
   return withDelay(store, CONNECT_DELAY_MS).then((connected) => {
     if (!settingsState.stores.some((s) => s.countryCode === connected.countryCode)) {
       settingsState.stores = [...settingsState.stores, connected];
+      // [DEMO-ONLY] 새로고침에도 연동이 유지되도록 세션에 남긴다 (백엔드 연동 시 삭제)
+      persistConnectedStores(settingsState.stores);
     }
     return connected;
   });
@@ -51,6 +58,7 @@ export const connectStore = (countryCode: string): Promise<ConnectedStore> => {
 
 export const disconnectStore = (countryCode: string): Promise<void> => {
   settingsState.stores = settingsState.stores.filter((s) => s.countryCode !== countryCode);
+  persistConnectedStores(settingsState.stores);
   return withDelay(undefined);
 };
 
