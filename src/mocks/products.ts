@@ -28,8 +28,8 @@ export const PENDING_PRODUCT_IDS = [DEMO_PRODUCT_ID];
  */
 const reportOnlyProgress: CountryProgress[] = [
   {
-    code: 'VN',
-    name: '베트남',
+    code: 'TH',
+    name: '태국',
     stage: 'report',
     salesStatus: '판매전',
     hasDetailPage: false,
@@ -44,8 +44,39 @@ const reportOnlyProgress: CountryProgress[] = [
     hasSalesInfo: false,
   },
   {
+    code: 'VN',
+    name: '베트남',
+    stage: 'report',
+    salesStatus: '판매전',
+    hasDetailPage: false,
+    hasSalesInfo: false,
+  },
+];
+
+/**
+ * 이미 운영 중인 상품의 진행 단계 — 싱가포르·태국은 업로드까지 끝나 판매 중,
+ * 베트남은 분석만 해 둔 상태. 기존 셀러라는 전제를 화면으로 보여주는 데이터다.
+ */
+const sellingProgress: CountryProgress[] = [
+  {
     code: 'TH',
     name: '태국',
+    stage: 'detail',
+    salesStatus: '판매중',
+    hasDetailPage: true,
+    hasSalesInfo: true,
+  },
+  {
+    code: 'SG',
+    name: '싱가포르',
+    stage: 'detail',
+    salesStatus: '판매중',
+    hasDetailPage: true,
+    hasSalesInfo: true,
+  },
+  {
+    code: 'VN',
+    name: '베트남',
     stage: 'report',
     salesStatus: '판매전',
     hasDetailPage: false,
@@ -81,9 +112,10 @@ export const productsMock: Product[] = [
     description: '비건 인증 원료로 만든 데일리 립틴트 4종 세트.',
     sellingPoints: '비건 인증 · 4가지 데일리 컬러 · 선물 패키지',
     mainTarget: '비건 화장품을 찾는 20대',
-    revenue: null,
-    registeredAt: '2026-05-28',
-    countries: reportOnlyProgress,
+    // 기존 셀러가 이미 운영 중인 상품 — 대시보드 매출과 '판매 중인 상품' 수의 근거
+    revenue: 4158000,
+    registeredAt: '2026-03-11',
+    countries: sellingProgress,
   },
   {
     id: 3,

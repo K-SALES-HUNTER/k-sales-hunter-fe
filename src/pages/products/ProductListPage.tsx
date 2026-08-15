@@ -11,8 +11,8 @@ import PageHeader from '@/components/layout/PageHeader';
 import { useProducts } from '@/hooks/useProducts';
 import { buildPath, PATH } from '@/routes/paths';
 
-/** 목 데이터 4건으로 페이지네이션 동작이 보이도록 페이지 크기 3 */
-const PAGE_SIZE = 3;
+/** 페이지 크기 — Figma 상품 목록이 한 페이지에 10행을 보여준다 */
+const PAGE_SIZE = 10;
 /** 검색 입력 디바운스 (명세: 300ms) */
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -190,8 +190,8 @@ const ProductListPage = () => {
                   </Table>
                 </TableWrapper>
 
-                {/* 전체 건수가 페이지 크기를 초과할 때만 노출 */}
-                {totalPages > 1 && (
+                {/* Figma는 한 페이지만 있어도 페이지 번호를 노출한다 */}
+                {totalPages >= 1 && (
                   <Pagination aria-label="페이지네이션">
                     {Array.from({ length: totalPages }, (_, index) => index + 1).map(
                       (pageNumber) => (

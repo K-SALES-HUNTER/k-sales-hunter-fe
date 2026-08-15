@@ -74,11 +74,6 @@ const TotalReportPage = () => {
   // 판매 이력 없는 국가는 집계 제외 (0원 표시 안 함)
   const sellingRevenues =
     sales?.countryRevenues.filter((r) => sellingCountries.some((c) => c.code === r.code)) ?? [];
-  // 비중 계산 분모 — 0 나눗셈 방지
-  const totalSellingRevenue = Math.max(
-    sellingRevenues.reduce((sum, r) => sum + r.revenue, 0),
-    1,
-  );
 
   return (
     <ProductShell
@@ -160,9 +155,6 @@ const TotalReportPage = () => {
                   <S.CountryRevenueMain>
                     <span>{revenue.name}</span>
                     <S.RevenueValue>{won(revenue.revenue)}</S.RevenueValue>
-                    <S.RevenueShare>
-                      비중 {Math.round((revenue.revenue / totalSellingRevenue) * 100)}%
-                    </S.RevenueShare>
                   </S.CountryRevenueMain>
                   <S.RowButton
                     type="button"

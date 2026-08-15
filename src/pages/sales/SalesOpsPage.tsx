@@ -83,7 +83,7 @@ const SalesOpsPage = () => {
   return (
     <ProductShell
       product={product}
-      title="판매 관리"
+      title={`${country?.name ?? countryCode} 보고서`}
       backTo={buildPath.totalReport(productId)}
       countryCode={countryCode}
       recommendedPrompts={RECOMMENDED_PROMPTS}

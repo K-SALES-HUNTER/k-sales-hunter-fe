@@ -1,7 +1,12 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { queryClient } from '@/apis/queryClient';
-import { persistConnectedStores, settingsState } from '@/mocks/settings';
+import {
+  INITIAL_CONNECTED_STORES,
+  INITIAL_MARKET_INFO,
+  persistConnectedStores,
+  settingsState,
+} from '@/mocks/settings';
 import type { CountryStage, Product, SalesStatus } from '@/types/product';
 import { useAiChatStore } from './useAiChatStore';
 import { useDetailImageStore } from './useDetailImageStore';
@@ -106,10 +111,11 @@ export const resetDemoSession = () => {
   useSalesOpsStore.setState({ statusByKey: {}, stockByProduct: {} });
   useDetailImageStore.setState({ addedByKey: {}, replacedByKey: {}, removedByKey: {} });
 
-  // 모듈 레벨 목 상태 (연동 스토어·마켓 정보)
-  settingsState.stores = [];
-  persistConnectedStores([]);
-  settingsState.market = { brandDirection: '', sellerType: '', mainTarget: '', brandTone: '' };
+  // 모듈 레벨 목 상태 — 빈 값이 아니라 '기존 셀러' 초기 상태로 되돌린다
+  const stores = INITIAL_CONNECTED_STORES.map((store) => ({ ...store }));
+  settingsState.stores = stores;
+  persistConnectedStores(stores);
+  settingsState.market = { ...INITIAL_MARKET_INFO };
 
   try {
     sessionStorage.removeItem(WELCOME_DISMISSED_KEY);

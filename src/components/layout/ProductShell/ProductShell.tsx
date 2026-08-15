@@ -19,6 +19,8 @@ interface ProductShellProps {
   countryCode?: string;
   /** 페이지별 AI 추천 프롬프트 */
   recommendedPrompts: string[];
+  /** 헤더 우측 액션 (Figma: 상세 페이지의 '오토 업로드' 버튼) */
+  headerAction?: ReactNode;
   children: ReactNode;
 }
 
@@ -33,6 +35,7 @@ const ProductShell = ({
   backTo,
   countryCode,
   recommendedPrompts,
+  headerAction,
   children,
 }: ProductShellProps) => {
   const navigate = useNavigate();
@@ -82,6 +85,7 @@ const ProductShell = ({
               <BackIcon src={arrowRightIcon} alt="" />
             </BackButton>
             <HeaderTitle>{title}</HeaderTitle>
+            {headerAction && <HeaderAction>{headerAction}</HeaderAction>}
           </BackHeader>
 
           {tabs.length > 1 && (
@@ -180,28 +184,38 @@ const HeaderTitle = styled.h1`
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
+/** 헤더 우측 액션 — 제목과 같은 줄 오른쪽 끝 */
+const HeaderAction = styled.div`
+  margin-left: auto;
+  padding-right: ${({ theme }) => theme.spacing.xs};
+`;
+
+/* Figma 12:14200 — 페이지 탭은 알약(pill) 버튼. 활성 탭만 네이비로 채운다 */
 const TabRow = styled.div`
   display: flex;
-  height: 40px;
-  padding: ${({ theme }) => `0 ${theme.spacing.md}`};
-  border-bottom: 0.8px solid ${({ theme }) => theme.colors.border};
+  gap: ${({ theme }) => theme.spacing.xs};
+  padding: ${({ theme }) => `0 ${theme.spacing.md} ${theme.spacing.sm}`};
 `;
 
 const Tab = styled(NavLink)`
   display: flex;
   align-items: center;
+  height: 36px;
   padding: ${({ theme }) => `0 ${theme.spacing.md}`};
+  border-radius: ${({ theme }) => theme.radius.md};
+  background: ${({ theme }) => theme.colors.bgLight};
   ${({ theme }) => theme.typography.label02};
   color: ${({ theme }) => theme.colors.textSecondary};
-  border-bottom: 2px solid transparent;
+  transition: background 120ms ease-out, color 120ms ease-out;
 
   &.active {
-    color: ${({ theme }) => theme.colors.primary};
-    border-bottom-color: ${({ theme }) => theme.colors.primary};
+    background: ${({ theme }) => theme.colors.primary};
+    color: ${({ theme }) => theme.colors.textOnPrimary};
   }
 
   &:hover:not(.active) {
     color: ${({ theme }) => theme.colors.textPrimary};
+    filter: brightness(0.97);
   }
 `;
 
