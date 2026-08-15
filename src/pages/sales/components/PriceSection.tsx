@@ -17,12 +17,18 @@ interface PriceSectionProps {
   scenarios: PriceScenario[];
 }
 
-const RATE_SUM =
-  marginBasisMock.dutyRate + marginBasisMock.vatRate + marginBasisMock.shopeeFeeRate;
-
-/** 개당 순이익 (관세·VAT·수수료·배송비 차감, 목 계산) */
-const calcUnitProfit = (price: number, costPrice: number, shippingKrw: number) =>
-  Math.round(price - price * RATE_SUM - costPrice - shippingKrw);
+/**
+ * 개당 순이익 — 국가별 보고서의 비용 차감 구조와 같은 순서로 계산한다.
+ * 관세·수입 VAT는 CIF(공급 원가 + 국제 배송비) 기준, Shopee 수수료만 판매가 기준이다.
+ * 수수료는 화면 표기와 어긋나지 않도록 십원 단위로 반올림한다.
+ */
+const calcUnitProfit = (price: number, costPrice: number, shippingKrw: number) => {
+  const cif = costPrice + shippingKrw;
+  const duty = cif * marginBasisMock.dutyRate;
+  const importVat = (cif + duty) * marginBasisMock.importVatRate;
+  const shopeeFee = Math.round((price * marginBasisMock.shopeeFeeRate) / 10) * 10;
+  return Math.round(price - costPrice - shippingKrw - duty - importVat - shopeeFee);
+};
 
 const formatPrice = (value: number) => `₩${value.toLocaleString()}`;
 

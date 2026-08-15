@@ -2,19 +2,22 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AiLoadingOverlay from '@/components/common/AiLoadingOverlay';
 import { useProductForm } from '@/hooks/useProductForm';
+import { DEMO_PRODUCT_ID } from '@/mocks/products';
 import { buildPath, PATH } from '@/routes/paths';
+import { useDemoProgressStore } from '@/stores/useDemoProgressStore';
 import FormPageHeader from './components/FormPageHeader';
 import ProductForm from './components/ProductForm';
 import * as S from './components/formPage.styled';
 
-/** TODO: 등록 API 응답의 productId로 교체 — 현재는 목 상품 1번 보고서로 이동 */
-const REGISTERED_PRODUCT_ID = 1;
+/** TODO: 등록 API 응답의 productId로 교체 — 현재는 목 상품 보고서로 이동 */
+const REGISTERED_PRODUCT_ID = DEMO_PRODUCT_ID;
 
 /** 상품 등록 (PRD-01-01, Figma 224:4210 · 526:6580) */
 const ProductRegisterPage = () => {
   const navigate = useNavigate();
   const form = useProductForm();
   const [analysisOpen, setAnalysisOpen] = useState(false);
+  const markRegistered = useDemoProgressStore((s) => s.markRegistered);
 
   /**
    * 우측 상단 버튼은 항상 1개 (Figma navibutton).
@@ -55,9 +58,12 @@ const ProductRegisterPage = () => {
       <AiLoadingOverlay
         open={analysisOpen}
         screenName="상품 등록"
-        onComplete={() =>
-          navigate(buildPath.totalReport(REGISTERED_PRODUCT_ID), { replace: true })
-        }
+        onComplete={() => {
+          // [DEMO-ONLY] 분석까지 끝나야 상품 목록·대시보드에 노출된다.
+          // 백엔드 연동 시: 등록 API 응답의 productId로 이동만 하고 이 호출은 삭제한다.
+          markRegistered(REGISTERED_PRODUCT_ID);
+          navigate(buildPath.totalReport(REGISTERED_PRODUCT_ID), { replace: true });
+        }}
         onCancel={() => setAnalysisOpen(false)}
       />
     </>

@@ -2,9 +2,11 @@ import { useMemo, useState } from 'react';
 import styled from '@emotion/styled';
 import { useNavigate, useParams } from 'react-router-dom';
 import Button from '@/components/common/Button';
+import Modal from '@/components/common/Modal';
 import ProductShell from '@/components/layout/ProductShell';
 import { useProduct } from '@/hooks/useProducts';
 import { useDetailContent } from '@/hooks/useSales';
+import { useConnectedStores } from '@/hooks/useSettings';
 import type { DetailImageTarget } from '@/mocks/detailImage';
 import {
   type DetailImageItem,
@@ -19,6 +21,7 @@ import {
   useDetailImageStore,
   type DetailImageEntry,
 } from '@/stores/useDetailImageStore';
+import { useDemoProgressStore } from '@/stores/useDemoProgressStore';
 import DetailEditPanel from './components/DetailEditPanel';
 import PdpPreview from './components/PdpPreview';
 import { Card, CardDesc, CardTitle } from './components/ui';
@@ -55,6 +58,7 @@ const DetailPage = () => {
           productId={productId}
           countryCode={countryCode}
           countryName={country?.name ?? countryCode}
+          uploaded={Boolean(country && country.salesStatus !== '판매전')}
           content={detail.content}
           seller={detail.seller}
           initialImages={detail.productImages}
@@ -69,6 +73,8 @@ interface DetailBodyProps {
   productId: number;
   countryCode: string;
   countryName: string;
+  /** 이미 Shopee에 업로드가 끝난 상태 */
+  uploaded: boolean;
   content: { ko: PdpContent; local: PdpContent };
   seller: PdpSeller;
   initialImages: ProductImageItem[];
@@ -90,12 +96,35 @@ const DetailBody = ({
   productId,
   countryCode,
   countryName,
+  uploaded,
   content,
   seller,
   initialImages,
   initialDetailImages,
 }: DetailBodyProps) => {
   const navigate = useNavigate();
+
+  /* Shopee 연동 상태 — 이 국가 스토어가 연동돼 있어야 업로드할 수 있다 (F-07) */
+  const { data: stores } = useConnectedStores();
+  const store = stores?.find((s) => s.countryCode === countryCode);
+  const markUploaded = useDemoProgressStore((s) => s.markUploaded);
+  const [uploading, setUploading] = useState(false);
+  const [uploadDone, setUploadDone] = useState(false);
+
+  /**
+   * [DEMO-ONLY] Shopee 업로드 — 공모전 제출 범위에서 실제 Open API 연동은 제외한다
+   * (2026-08-15 회의 결정). 업로드 요청 접수와 성공 화면까지만 처리하고,
+   * 이후 운영은 판매 관리 화면이 담당한다.
+   * 백엔드 연동 시: setTimeout을 업로드 API 호출로 바꾸고 markUploaded 대신 응답 상태를 쓴다.
+   */
+  const uploadToShopee = () => {
+    setUploading(true);
+    setTimeout(() => {
+      setUploading(false);
+      markUploaded(productId, countryCode);
+      setUploadDone(true);
+    }, 1600);
+  };
 
   const productImageKey = detailImageKey(productId, countryCode, 'product');
   const detailImageStoreKey = detailImageKey(productId, countryCode, 'detail');
@@ -181,24 +210,51 @@ const DetailBody = ({
           mainImageId={mainImageId}
           detailImages={detailImages}
           countryName={countryName}
+          language={language}
         />
 
-        {/* Shopee 연동 섹션 (F-07) — 이 국가의 연동 정보만 표시 */}
+        {/* Shopee 연동·업로드 섹션 (F-07) — 이 국가의 연동 정보만 표시 */}
         <Card id="section-connect" aria-labelledby="connect-title">
-          <CardTitle id="connect-title">Shopee 연동</CardTitle>
-          <CardDesc>
-            {countryName} Shopee 스토어가 아직 연동되지 않았습니다. 스토어를 연동하면 검수한 상세
-            페이지를 현지 언어로 바로 업로드할 수 있습니다.
-          </CardDesc>
-          <Button
-            variant="secondary"
-            onClick={() =>
-              // TODO: 마켓/설정 화면 개발 시 마켓플레이스 탭 딥링크로 연동 상태 연결
-              navigate(`${PATH.SETTINGS}?tab=marketplace`)
-            }
-          >
-            스토어 연동하기
-          </Button>
+          <CardTitle id="connect-title">Shopee 업로드</CardTitle>
+          {!store && (
+            <>
+              <CardDesc>
+                {countryName} Shopee 스토어가 아직 연동되지 않았습니다. 스토어를 연동하면 검수한
+                상세 페이지를 현지 언어로 바로 업로드할 수 있습니다.
+              </CardDesc>
+              <Button
+                variant="secondary"
+                onClick={() => navigate(`${PATH.SETTINGS}?tab=marketplace`)}
+              >
+                스토어 연동하기
+              </Button>
+            </>
+          )}
+          {store && !uploaded && (
+            <>
+              <CardDesc>
+                {countryName} Shopee 스토어 <StoreName>{store.storeName}</StoreName>에 연동되어
+                있습니다. 검수를 마쳤다면 지금 보이는 현지 언어 상세 페이지 그대로 업로드됩니다.
+              </CardDesc>
+              <Button variant="primary" loading={uploading} onClick={uploadToShopee}>
+                Shopee에 업로드
+              </Button>
+            </>
+          )}
+          {store && uploaded && (
+            <>
+              <CardDesc>
+                업로드가 완료되어 {countryName} Shopee에서 판매 중입니다. 주문·재고·가격은 판매 관리
+                화면에서 확인할 수 있습니다.
+              </CardDesc>
+              <Button
+                variant="secondary"
+                onClick={() => navigate(buildPath.salesOps(productId, countryCode))}
+              >
+                판매 관리로 이동
+              </Button>
+            </>
+          )}
         </Card>
       </PreviewColumn>
 
@@ -222,9 +278,37 @@ const DetailBody = ({
         onGenerateDetailImage={() => goGenerate('detail')}
         onRegenerateDetailImage={(id) => goGenerate('detail', id)}
       />
+
+      {/* 업로드 성공 (F-07) — 확인 후 상단 '판매 관리' 탭이 열린다 */}
+      <Modal
+        open={uploadDone}
+        title="Shopee에 업로드했습니다"
+        description={`${countryName} Shopee에 상품이 등록되어 판매가 시작됐습니다. 이제 주문·재고·가격을 판매 관리 화면에서 관리할 수 있습니다.`}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setUploadDone(false)}>
+              상세 페이지에 머무르기
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                setUploadDone(false);
+                navigate(buildPath.salesOps(productId, countryCode));
+              }}
+            >
+              판매 관리로 이동
+            </Button>
+          </>
+        }
+      />
     </Columns>
   );
 };
+
+const StoreName = styled.strong`
+  ${({ theme }) => theme.typography.label02};
+  color: ${({ theme }) => theme.colors.primary};
+`;
 
 /* 미리보기 + 편집 패널 2단. 사이드바·AI 패널까지 겹치면 폭이 부족해 좁은 화면에서는 세로로 쌓는다 */
 const Columns = styled.div`

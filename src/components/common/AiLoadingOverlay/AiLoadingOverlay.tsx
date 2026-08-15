@@ -17,6 +17,10 @@ interface AnalysisStep {
 /**
  * 기본 5단계 (SYS-01-01, Figma 599:9717):
  * 오케스트레이터 노드 순서(gate→market→shipping→margin→report)를 사용자 언어로 옮긴 것.
+ *
+ * [DEMO-ONLY] durationMs는 목 진행 속도다(총 약 7.8초). 남은 시간 표시도 이 값에서 계산한다.
+ * 백엔드 연동 시: /analysis-jobs/{id}/events SSE의 단계 이벤트로 진행을 갱신하고
+ * durationMs와 remainingSeconds를 삭제한다.
  */
 const STEPS: AnalysisStep[] = [
   { task: '판매 가능 여부 확인', agent: '리스크 매니저', durationMs: 1200 },
@@ -34,8 +38,12 @@ const STEPS: AnalysisStep[] = [
 
 /** 마지막 단계 완료 후 onComplete까지의 여유 */
 const COMPLETE_DELAY_MS = 400;
-/** 남은 시간 계산 — 남은 단계 하나를 1분으로 환산 */
-const MINUTES_PER_STEP = 1;
+
+/** 남은 시간 — 아직 끝나지 않은 단계의 실제 소요 시간 합계 (초, 올림) */
+const remainingSeconds = (completed: number) => {
+  const restMs = STEPS.slice(completed).reduce((sum, step) => sum + step.durationMs, 0);
+  return Math.max(1, Math.ceil(restMs / 1000));
+};
 
 interface AiLoadingOverlayProps {
   open: boolean;
@@ -94,8 +102,7 @@ const AiLoadingOverlayContent = ({
     return () => clearTimeout(timer);
   }, [confirmOpen, completed, onComplete]);
 
-  const remainingSteps = Math.max(STEPS.length - completed, 1);
-  const remainingMinutes = remainingSteps * MINUTES_PER_STEP;
+  const remaining = remainingSeconds(completed);
 
   const rows = STEPS.map((step, index) => {
     const state: StepState =
@@ -110,7 +117,7 @@ const AiLoadingOverlayContent = ({
           <S.TitleGroup>
             {screenName && <S.ScreenName>{screenName}</S.ScreenName>}
             <S.Title>{title}</S.Title>
-            <S.Remaining>예상 소요 시간 {remainingMinutes}분 남음</S.Remaining>
+            <S.Remaining>예상 소요 시간 약 {remaining}초 남음</S.Remaining>
           </S.TitleGroup>
 
           <S.ProgressTrack>

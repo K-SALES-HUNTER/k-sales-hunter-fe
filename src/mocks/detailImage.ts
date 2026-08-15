@@ -1,6 +1,6 @@
-import detailImgResult from '@/assets/images/detailimg-result.png';
-import salesPdpMain from '@/assets/images/sales-pdp-main.png';
-import salesPdpSub from '@/assets/images/sales-pdp-sub.png';
+import mallangBlue from '@/assets/images/mallang-blue.png';
+import mallangPurple from '@/assets/images/mallang-purple.png';
+import mallangSet from '@/assets/images/detailimg-result.png';
 
 /**
  * 이미지 AI 생성 대상 (Figma 573:6715 / 677:10398 — 제목만 다른 같은 화면)
@@ -45,7 +45,7 @@ export const promptSectionMock = {
   title: '요청 내용',
   notice: '어떤 상세 이미지를 원하는지 문장으로 적어 주세요.',
   placeholder:
-    '예) 제품의 주요 기능 3가지를 아이콘과 함께 정리한 인포그래픽 형태로 만들어 주세요. 배경은 밝은 회색, 문구는 영어로 부탁합니다.',
+    '예) 캐릭터 인형 한 종만 정면에서 보여주는 단독 컷으로 만들어 주세요. 배경은 밝은 회색, 그림자는 부드럽게 부탁합니다.',
 } as const;
 
 /** 이미지 재생성 확인 모달 문구 (Figma 604:10270) */
@@ -64,8 +64,8 @@ export interface ReferencePhoto {
 
 /** AI가 보유한 상품 사진 — 상품 등록 시 올린 사진을 참고 사진 후보로 제시 */
 export const referencePhotosMock: ReferencePhoto[] = [
-  { id: 'ref-1', label: '보유 사진 1', src: salesPdpMain },
-  { id: 'ref-2', label: '보유 사진 2', src: salesPdpSub },
+  { id: 'ref-1', label: '보유 사진 1', src: mallangSet },
+  { id: 'ref-2', label: '보유 사진 2', src: mallangBlue },
 ];
 
 export type GenerationModeId = 'basic' | 'model';
@@ -96,8 +96,12 @@ export const baseModelsMock: BaseModel[] = [
   { id: 'model-4', name: '기본 모델 4', desc: '30대 남성 · 동남아시아' },
 ];
 
-/** 생성 결과 목 이미지 */
-export const generatedImageSrcMock = detailImgResult;
+/**
+ * [DEMO-ONLY] 생성 결과 목 이미지 — 각본의 요청 문구("베리(퍼플) 캐릭터 단독 컷")와
+ * 맞아떨어지도록 보라색 캐릭터 단독 컷을 쓴다. 요청 문구를 바꾸면 이 이미지도 함께 바꿔야 한다.
+ * 백엔드 연동 시: 이미지 생성 API 응답 URL로 교체.
+ */
+export const generatedImageSrcMock = mallangPurple;
 
 /** 목 생성 소요 시간 (1.5~2초) */
 export const GENERATE_DURATION_MS = 1800;
