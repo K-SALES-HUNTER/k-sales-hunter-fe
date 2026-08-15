@@ -40,7 +40,12 @@ export const useRecentProducts = () => {
             !PENDING_PRODUCT_IDS.includes(product.id) ||
             registeredProductIds.includes(product.id),
         )
-        .map((product) => (hasSales ? product : { ...product, revenue: null })),
+        // 시연 대상 상품만 판매를 시작하기 전까지 매출 셀을 비운다 (기존 상품 실적은 그대로)
+        .map((product) =>
+          PENDING_PRODUCT_IDS.includes(product.id) && !hasSales
+            ? { ...product, revenue: null }
+            : product,
+        ),
     [registeredProductIds, hasSales],
   );
 

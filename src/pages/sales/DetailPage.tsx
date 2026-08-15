@@ -24,7 +24,6 @@ import {
 import { useDemoProgressStore } from '@/stores/useDemoProgressStore';
 import DetailEditPanel from './components/DetailEditPanel';
 import PdpPreview from './components/PdpPreview';
-import { Card, CardDesc, CardTitle } from './components/ui';
 
 const RECOMMENDED_PROMPTS = ['더 고급스럽게 만들어줘', '상품 정보 더 자세하게', '이 정보 반영해줘'];
 
@@ -40,31 +39,95 @@ const DetailPage = () => {
 
   const { data: product } = useProduct(productId);
   const { data: detail } = useDetailContent(productId, countryCode);
+  const { data: stores } = useConnectedStores();
+  const markUploaded = useDemoProgressStore((s) => s.markUploaded);
+  const navigate = useNavigate();
+
+  const [uploading, setUploading] = useState(false);
+  const [uploadDone, setUploadDone] = useState(false);
 
   if (!product) return <LoadingText>상세 페이지를 불러오는 중…</LoadingText>;
 
   const country = product.countries.find((c) => c.code === countryCode);
+  const countryName = country?.name ?? countryCode;
+  const store = stores?.find((s) => s.countryCode === countryCode);
+  const uploaded = Boolean(country && country.salesStatus !== '판매전');
+
+  /**
+   * [DEMO-ONLY] 오토 업로드 (Figma 12:14200 헤더 우측) —
+   * 공모전 제출 범위에서 실제 Shopee Open API 연동은 제외한다 (2026-08-15 회의 결정).
+   * 백엔드 연동 시: setTimeout을 업로드 API 호출로 바꾸고 markUploaded 대신 응답 상태를 쓴다.
+   */
+  const uploadToShopee = () => {
+    setUploading(true);
+    setTimeout(() => {
+      setUploading(false);
+      markUploaded(productId, countryCode);
+      setUploadDone(true);
+    }, 1600);
+  };
+
+  /** 연동 전이면 설정으로, 업로드 후에는 판매 관리로 — 그 외에는 오토 업로드 */
+  const headerAction = !store ? (
+    <Button variant="secondary" onClick={() => navigate(`${PATH.SETTINGS}?tab=marketplace`)}>
+      스토어 연동하기
+    </Button>
+  ) : uploaded ? (
+    <Button
+      variant="secondary"
+      onClick={() => navigate(buildPath.salesOps(productId, countryCode))}
+    >
+      판매 관리로 이동
+    </Button>
+  ) : (
+    <Button variant="primary" loading={uploading} onClick={uploadToShopee}>
+      오토 업로드
+    </Button>
+  );
 
   return (
     <ProductShell
       product={product}
-      title="상세 페이지"
+      title={`${countryName} 보고서`}
       backTo={buildPath.countryReport(productId, countryCode)}
       countryCode={countryCode}
       recommendedPrompts={RECOMMENDED_PROMPTS}
+      headerAction={headerAction}
     >
       {detail && (
         <DetailBody
           productId={productId}
           countryCode={countryCode}
-          countryName={country?.name ?? countryCode}
-          uploaded={Boolean(country && country.salesStatus !== '판매전')}
+          countryName={countryName}
           content={detail.content}
           seller={detail.seller}
           initialImages={detail.productImages}
           initialDetailImages={detail.detailImages}
         />
       )}
+
+      {/* 업로드 성공 (F-07) — 확인 후 상단 '판매 관리' 탭이 열린다 */}
+      <Modal
+        open={uploadDone}
+        title="Shopee에 업로드했습니다"
+        description={`${countryName} Shopee에 상품이 등록되어 판매가 시작됐습니다. 이제 주문·재고·가격을 판매 관리 화면에서 관리할 수 있습니다.`}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setUploadDone(false)}>
+              상세 페이지에 머무르기
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                setUploadDone(false);
+                navigate(buildPath.salesOps(productId, countryCode));
+              }}
+            >
+              판매 관리로 이동
+            </Button>
+          </>
+        }
+      />
     </ProductShell>
   );
 };
@@ -73,8 +136,6 @@ interface DetailBodyProps {
   productId: number;
   countryCode: string;
   countryName: string;
-  /** 이미 Shopee에 업로드가 끝난 상태 */
-  uploaded: boolean;
   content: { ko: PdpContent; local: PdpContent };
   seller: PdpSeller;
   initialImages: ProductImageItem[];
@@ -96,35 +157,12 @@ const DetailBody = ({
   productId,
   countryCode,
   countryName,
-  uploaded,
   content,
   seller,
   initialImages,
   initialDetailImages,
 }: DetailBodyProps) => {
   const navigate = useNavigate();
-
-  /* Shopee 연동 상태 — 이 국가 스토어가 연동돼 있어야 업로드할 수 있다 (F-07) */
-  const { data: stores } = useConnectedStores();
-  const store = stores?.find((s) => s.countryCode === countryCode);
-  const markUploaded = useDemoProgressStore((s) => s.markUploaded);
-  const [uploading, setUploading] = useState(false);
-  const [uploadDone, setUploadDone] = useState(false);
-
-  /**
-   * [DEMO-ONLY] Shopee 업로드 — 공모전 제출 범위에서 실제 Open API 연동은 제외한다
-   * (2026-08-15 회의 결정). 업로드 요청 접수와 성공 화면까지만 처리하고,
-   * 이후 운영은 판매 관리 화면이 담당한다.
-   * 백엔드 연동 시: setTimeout을 업로드 API 호출로 바꾸고 markUploaded 대신 응답 상태를 쓴다.
-   */
-  const uploadToShopee = () => {
-    setUploading(true);
-    setTimeout(() => {
-      setUploading(false);
-      markUploaded(productId, countryCode);
-      setUploadDone(true);
-    }, 1600);
-  };
 
   const productImageKey = detailImageKey(productId, countryCode, 'product');
   const detailImageStoreKey = detailImageKey(productId, countryCode, 'detail');
@@ -213,49 +251,6 @@ const DetailBody = ({
           language={language}
         />
 
-        {/* Shopee 연동·업로드 섹션 (F-07) — 이 국가의 연동 정보만 표시 */}
-        <Card id="section-connect" aria-labelledby="connect-title">
-          <CardTitle id="connect-title">Shopee 업로드</CardTitle>
-          {!store && (
-            <>
-              <CardDesc>
-                {countryName} Shopee 스토어가 아직 연동되지 않았습니다. 스토어를 연동하면 검수한
-                상세 페이지를 현지 언어로 바로 업로드할 수 있습니다.
-              </CardDesc>
-              <Button
-                variant="secondary"
-                onClick={() => navigate(`${PATH.SETTINGS}?tab=marketplace`)}
-              >
-                스토어 연동하기
-              </Button>
-            </>
-          )}
-          {store && !uploaded && (
-            <>
-              <CardDesc>
-                {countryName} Shopee 스토어 <StoreName>{store.storeName}</StoreName>에 연동되어
-                있습니다. 검수를 마쳤다면 지금 보이는 현지 언어 상세 페이지 그대로 업로드됩니다.
-              </CardDesc>
-              <Button variant="primary" loading={uploading} onClick={uploadToShopee}>
-                Shopee에 업로드
-              </Button>
-            </>
-          )}
-          {store && uploaded && (
-            <>
-              <CardDesc>
-                업로드가 완료되어 {countryName} Shopee에서 판매 중입니다. 주문·재고·가격은 판매 관리
-                화면에서 확인할 수 있습니다.
-              </CardDesc>
-              <Button
-                variant="secondary"
-                onClick={() => navigate(buildPath.salesOps(productId, countryCode))}
-              >
-                판매 관리로 이동
-              </Button>
-            </>
-          )}
-        </Card>
       </PreviewColumn>
 
       <DetailEditPanel
@@ -279,36 +274,10 @@ const DetailBody = ({
         onRegenerateDetailImage={(id) => goGenerate('detail', id)}
       />
 
-      {/* 업로드 성공 (F-07) — 확인 후 상단 '판매 관리' 탭이 열린다 */}
-      <Modal
-        open={uploadDone}
-        title="Shopee에 업로드했습니다"
-        description={`${countryName} Shopee에 상품이 등록되어 판매가 시작됐습니다. 이제 주문·재고·가격을 판매 관리 화면에서 관리할 수 있습니다.`}
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setUploadDone(false)}>
-              상세 페이지에 머무르기
-            </Button>
-            <Button
-              variant="primary"
-              onClick={() => {
-                setUploadDone(false);
-                navigate(buildPath.salesOps(productId, countryCode));
-              }}
-            >
-              판매 관리로 이동
-            </Button>
-          </>
-        }
-      />
     </Columns>
   );
 };
 
-const StoreName = styled.strong`
-  ${({ theme }) => theme.typography.label02};
-  color: ${({ theme }) => theme.colors.primary};
-`;
 
 /* 미리보기 + 편집 패널 2단. 사이드바·AI 패널까지 겹치면 폭이 부족해 좁은 화면에서는 세로로 쌓는다 */
 const Columns = styled.div`
