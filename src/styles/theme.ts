@@ -13,6 +13,8 @@ const palette = {
   // secondary (그린)
   secondaryStrong: '#2E7D32',
   secondaryLight: '#E8F5E9',
+  /** 판매 국가 연동 화면의 '연동 완료' 그린 (Figma 12:15677) — 마켓플레이스 탭의 그린과 다르다 */
+  secondaryVivid: '#0B9858',
 
   // third (퍼플)
   thirdThird: '#8150C0',
@@ -50,6 +52,8 @@ const colors = {
   // 상태
   success: palette.secondaryStrong,
   successLight: palette.secondaryLight,
+  /** 연동 완료 표시 전용 그린 — Figma가 화면별로 두 가지 그린을 쓴다 */
+  successVivid: palette.secondaryVivid,
   error: palette.warningWarning,
   errorLight: palette.warningLight,
 

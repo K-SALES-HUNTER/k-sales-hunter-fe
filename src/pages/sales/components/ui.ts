@@ -1,4 +1,13 @@
 import styled from '@emotion/styled';
+import Button from '@/components/common/Button';
+
+/**
+ * 폼 저장류 CTA (Figma 12:14476 · 12:14726 · 12:16361) —
+ * 헤더 CTA(그라데이션)와 달리 본문 저장/추가 버튼은 단색 네이비 채움이다.
+ */
+export const SolidButton = styled(Button)`
+  background: ${({ theme }) => theme.colors.primary};
+`;
 
 /** 판매 준비·운영 페이지 공용 카드 (Figma Card) */
 export const Card = styled.section`

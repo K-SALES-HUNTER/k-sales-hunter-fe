@@ -22,6 +22,19 @@ export const Card = styled.div`
   text-align: center;
 `;
 
+/* Figma 12:15474 — 제목 위 원형 아이콘 (연한 남색 원 + 흰 느낌표) */
+export const IconCircle = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: ${({ theme }) => theme.spacing.xs};
+  border-radius: 50%;
+  background: ${({ theme }) => theme.colors.primaryLight};
+  color: ${({ theme }) => theme.colors.surface};
+`;
+
 export const Title = styled.h2`
   ${({ theme }) => theme.typography.heading03};
   color: ${({ theme }) => theme.colors.textPrimary};

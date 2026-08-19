@@ -1,3 +1,4 @@
+import Button from '@/components/common/Button';
 import { keyframes } from '@emotion/react';
 import styled from '@emotion/styled';
 
@@ -20,10 +21,34 @@ export const Panel = styled.div`
   width: min(704px, 100%);
 `;
 
-/** 어느 화면에서 호출한 로딩인지 표시 */
-export const ScreenName = styled.p`
-  ${({ theme }) => theme.typography.captionStrong};
+/**
+ * 좌측 상단 — 호출한 화면의 네비게이션명 유지 (Figma 12:15609 '기존 페이지 네비게이션명 적기').
+ * 클릭 동작 없는 표시용이므로 버튼이 아닌 정적 요소로 둔다.
+ */
+export const ScreenHeader = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.xs};
+  padding: ${({ theme }) => `${theme.spacing.lg} ${theme.spacing.md}`};
+`;
+
+export const ScreenChevron = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
   color: ${({ theme }) => theme.colors.textSecondary};
+`;
+
+export const ScreenName = styled.p`
+  ${({ theme }) => theme.typography.heading03};
+  color: ${({ theme }) => theme.colors.textPrimary};
+  white-space: nowrap;
 `;
 
 export const TitleGroup = styled.div`
@@ -141,7 +166,7 @@ export const StepStatus = styled.p<{ $pending: boolean }>`
     $pending ? theme.colors.textSecondary : theme.colors.primary};
 `;
 
-export const CancelRow = styled.div`
-  display: flex;
-  justify-content: center;
+/* Figma 12:15609 — 중단하기는 단색 네이비 (그라데이션은 헤더 CTA 전용) */
+export const StopButton = styled(Button)`
+  background: ${({ theme }) => theme.colors.primary};
 `;

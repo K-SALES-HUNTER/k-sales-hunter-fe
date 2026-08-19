@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import styled from '@emotion/styled';
-import Button from '@/components/common/Button';
 import InputSet from '@/components/common/InputSet';
 import { SALES_STEP_DELAY_MS } from '@/apis/sales';
 import type { PriceHistoryRow, PriceImpactRow } from '@/mocks/sales';
-import { Card, CardDesc, CardTitle, NoticeBox, SubTitle, Table, TableScroll } from './ui';
+import { Card, CardTitle, NoticeBox, SolidButton, SubTitle, Table, TableScroll } from './ui';
 
 interface PriceManageSectionProps {
   currentPrice: number;
@@ -42,20 +41,19 @@ const PriceManageSection = ({
 
   return (
     <Card id="section-price-manage" aria-labelledby="price-manage-title">
-      <div>
-        <HeaderRow>
-          <CardTitle id="price-manage-title">가격 관리</CardTitle>
-          {/* 환율은 1시간 캐싱된 실시간 값 (R-002-04) */}
-          <FxBadge title={fxNote}>실시간 환율 적용</FxBadge>
-        </HeaderRow>
-        <CardDesc>{fxNote}</CardDesc>
-      </div>
+      <HeaderRow>
+        <CardTitle id="price-manage-title">가격 관리</CardTitle>
+        {/* 환율은 1시간 캐싱된 실시간 값 (R-002-04) */}
+        <FxBadge title={fxNote}>실시간 환율 적용</FxBadge>
+      </HeaderRow>
 
       {note && <NoticeBox>{note}</NoticeBox>}
 
+      {/* Figma 12:14726 — 가격 변경은 필수 입력(*), 우측 저장 버튼 */}
       <PriceRow>
         <InputSet
           label="가격 변경"
+          required
           unit="원"
           inputMode="numeric"
           disabled={disabled}
@@ -63,9 +61,9 @@ const PriceManageSection = ({
           onChange={(e) => setPriceRaw(e.target.value.replace(/[^0-9]/g, ''))}
         />
         <ApplyButtonBox>
-          <Button loading={applying} disabled={disabled || price === 0} onClick={apply}>
-            적용
-          </Button>
+          <SolidButton loading={applying} disabled={disabled || price === 0} onClick={apply}>
+            저장
+          </SolidButton>
         </ApplyButtonBox>
       </PriceRow>
 
@@ -82,14 +80,13 @@ const PriceManageSection = ({
               </tr>
             </thead>
             <tbody>
+              {/* Figma 12:14726 — 판단 값은 칩 없이 텍스트로 표기 */}
               {impacts.map((row) => (
                 <tr key={row.price}>
                   <td>{row.price}</td>
                   <td>{row.margin}</td>
                   <td>{row.impact}</td>
-                  <td>
-                    <VerdictChip $verdict={row.verdict}>{row.verdict}</VerdictChip>
-                  </td>
+                  <td>{row.verdict}</td>
                 </tr>
               ))}
             </tbody>
@@ -153,23 +150,6 @@ const PriceRow = styled.div`
 
 const ApplyButtonBox = styled.div`
   padding-bottom: 1px;
-`;
-
-const VerdictChip = styled.span<{ $verdict: PriceImpactRow['verdict'] }>`
-  display: inline-flex;
-  padding: 2px 8px;
-  border-radius: ${({ theme }) => theme.radius.sm};
-  ${({ theme }) => theme.typography.captionStrong};
-  ${({ theme, $verdict }) => {
-    switch ($verdict) {
-      case '추천':
-        return `background: ${theme.colors.successLight}; color: ${theme.colors.success};`;
-      case '신중':
-        return `background: ${theme.colors.errorLight}; color: ${theme.colors.error};`;
-      default:
-        return `background: ${theme.colors.primaryLight}; color: ${theme.colors.primary};`;
-    }
-  }}
 `;
 
 export default PriceManageSection;

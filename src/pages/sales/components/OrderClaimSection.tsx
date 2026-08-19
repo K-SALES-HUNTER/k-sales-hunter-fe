@@ -7,8 +7,6 @@ import {
   type OrderRow,
 } from '@/mocks/sales';
 import {
-  Card,
-  CardDesc,
   CardTitle,
   EmptyText,
   StatBox,
@@ -17,6 +15,7 @@ import {
   StatValue,
   Table,
   TableScroll,
+  WarningText,
 } from './ui';
 
 interface OrderClaimSectionProps {
@@ -41,12 +40,15 @@ const OrderClaimSection = ({ summary, rows, disabled = false }: OrderClaimSectio
   );
 
   return (
-    <Card id="section-orders" aria-labelledby="orders-title">
+    <Section id="section-orders" aria-labelledby="orders-title">
+      {/* Figma 12:14726 — 배송 대행이 아님을 경고색으로 2줄 안내 */}
       <div>
         <CardTitle id="orders-title">주문·클레임 현황</CardTitle>
-        <CardDesc>
-          배송은 셀러가 직접 진행합니다. 주문·클레임 확인과 배송 처리 상태 기록을 지원합니다.
-        </CardDesc>
+        <WarningText>※ K-salesHunter는 배송 대행 서비스가 아닙니다.</WarningText>
+        <WarningText>
+          실제 배송 처리는 셀러가 직접 진행하며, 이 화면에서는 주문 확인·클레임 확인·배송 처리 상태
+          기록만 지원합니다.
+        </WarningText>
       </div>
 
       <StatGrid $columns={3}>
@@ -119,9 +121,16 @@ const OrderClaimSection = ({ summary, rows, disabled = false }: OrderClaimSectio
 
       {/* 페이지 인디케이터 (Figma 597:9571) — 목 데이터는 1페이지 */}
       {rows.length > 0 && <PageIndicator aria-label="1 페이지">1</PageIndicator>}
-    </Card>
+    </Section>
   );
 };
+
+/** Figma 12:14726 — 재고 관리와 한 카드를 이루는 내부 블록 (카드 래핑은 SalesOpsPage) */
+const Section = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.spacing.md};
+`;
 
 const DropdownCell = styled.td`
   min-width: 130px;

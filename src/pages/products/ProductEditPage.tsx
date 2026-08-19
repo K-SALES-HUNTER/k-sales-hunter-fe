@@ -252,8 +252,9 @@ const ApplyText = styled.p`
 `;
 
 const ApplySpinner = styled.span`
-  width: 40px;
-  height: 40px;
+  /* Figma 12:15467 mingcute:loading-fill 48x48 */
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   border: 4px solid transparent;
   border-top-color: ${({ theme }) => theme.colors.textOnPrimary};

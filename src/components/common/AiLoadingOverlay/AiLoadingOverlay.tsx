@@ -39,10 +39,10 @@ const STEPS: AnalysisStep[] = [
 /** 마지막 단계 완료 후 onComplete까지의 여유 */
 const COMPLETE_DELAY_MS = 400;
 
-/** 남은 시간 — 아직 끝나지 않은 단계의 실제 소요 시간 합계 (초, 올림) */
-const remainingSeconds = (completed: number) => {
+/** 남은 시간 — 아직 끝나지 않은 단계의 실제 소요 시간 합계 (분, 올림 — Figma 12:15609 'n분 남음') */
+const remainingMinutes = (completed: number) => {
   const restMs = STEPS.slice(completed).reduce((sum, step) => sum + step.durationMs, 0);
-  return Math.max(1, Math.ceil(restMs / 1000));
+  return Math.max(1, Math.ceil(restMs / 60_000));
 };
 
 interface AiLoadingOverlayProps {
@@ -102,7 +102,7 @@ const AiLoadingOverlayContent = ({
     return () => clearTimeout(timer);
   }, [confirmOpen, completed, onComplete]);
 
-  const remaining = remainingSeconds(completed);
+  const remaining = remainingMinutes(completed);
 
   const rows = STEPS.map((step, index) => {
     const state: StepState =
@@ -113,11 +113,27 @@ const AiLoadingOverlayContent = ({
   return (
     <>
       <S.Overlay role="alert" aria-busy>
+        {/* 호출한 화면의 네비게이션명 유지 (Figma 12:15609 좌측 상단) */}
+        {screenName && (
+          <S.ScreenHeader aria-hidden>
+            <S.ScreenChevron>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" focusable="false">
+                <path
+                  d="M14.5 6L8.5 12L14.5 18"
+                  stroke="currentColor"
+                  strokeWidth="1.75"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </S.ScreenChevron>
+            <S.ScreenName>{screenName}</S.ScreenName>
+          </S.ScreenHeader>
+        )}
         <S.Panel>
           <S.TitleGroup>
-            {screenName && <S.ScreenName>{screenName}</S.ScreenName>}
             <S.Title>{title}</S.Title>
-            <S.Remaining>예상 소요 시간 약 {remaining}초 남음</S.Remaining>
+            <S.Remaining>예상 소요 시간 {remaining}분 남음</S.Remaining>
           </S.TitleGroup>
 
           <S.ProgressTrack>
@@ -145,11 +161,10 @@ const AiLoadingOverlayContent = ({
             })}
           </S.StepList>
 
-          <S.CancelRow>
-            <Button variant="text" onClick={() => setConfirmOpen(true)}>
-              중단하기
-            </Button>
-          </S.CancelRow>
+          {/* 단색 네이비 풀폭 버튼 (Figma 12:15609) */}
+          <S.StopButton variant="primary" fullWidth onClick={() => setConfirmOpen(true)}>
+            중단하기
+          </S.StopButton>
         </S.Panel>
       </S.Overlay>
 

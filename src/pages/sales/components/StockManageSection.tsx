@@ -2,7 +2,7 @@ import styled from '@emotion/styled';
 import Button from '@/components/common/Button';
 import InputSet from '@/components/common/InputSet';
 import type { StockRow } from '@/mocks/sales';
-import { Card, CardDesc, CardTitle, EmptyText } from './ui';
+import { CardDesc, CardTitle, EmptyText, SolidButton, SubTitle } from './ui';
 
 interface StockManageSectionProps {
   rows: StockRow[];
@@ -23,26 +23,23 @@ const StockManageSection = ({
   onEditOptions,
 }: StockManageSectionProps) => {
   return (
-    <Card id="section-stock" aria-labelledby="stock-title">
+    <Section id="section-stock" aria-labelledby="stock-title">
+      {/* Figma 12:14726 — 주문·클레임 현황과 한 카드 안의 재고 관리 블록 */}
       <div>
         <CardTitle id="stock-title">재고 관리</CardTitle>
         <CardDesc>
-          주문이 들어올 때마다 재고가 자동 차감됩니다. 재고 수정은 재고량 추가로만 가능합니다.
+          주문이 들어올 때마다 재고를 자동 차감합니다. 재고량 추가 시, 사이트에 자동으로
+          반영합니다.
         </CardDesc>
       </div>
+
+      <SubTitle>남은 재고량</SubTitle>
 
       {/* 옵션 조합이 없으면 단일 재고로 안내 (OPS-01-01 #10) */}
       {rows.length === 0 && (
         <EmptyText>등록된 옵션 조합이 없습니다. 단일 재고로 관리됩니다.</EmptyText>
       )}
 
-      {rows.length > 0 && (
-        <HeaderRow>
-          <span>1단 속성</span>
-          <span>2단 속성</span>
-          <span>수량</span>
-        </HeaderRow>
-      )}
       {rows.map((row) => (
         <StockRowBox key={`${row.option1}-${row.option2}`}>
           <InputSet aria-label="1단 속성" value={row.option1} readOnly disabled />
@@ -54,25 +51,21 @@ const StockManageSection = ({
         </StockRowBox>
       ))}
 
-      <Button fullWidth disabled={disabled} onClick={onAddStock}>
+      <SolidButton fullWidth disabled={disabled} onClick={onAddStock}>
         재고량 추가
-      </Button>
+      </SolidButton>
       <Button variant="secondary" fullWidth disabled={disabled} onClick={onEditOptions}>
         판매 옵션 수정
       </Button>
-    </Card>
+    </Section>
   );
 };
 
-const HeaderRow = styled.div`
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+/** Figma 12:14726 — 주문·클레임 현황과 한 카드를 이루는 내부 블록 */
+const Section = styled.div`
+  display: flex;
+  flex-direction: column;
   gap: ${({ theme }) => theme.spacing.sm};
-
-  span {
-    ${({ theme }) => theme.typography.tableHeader};
-    color: ${({ theme }) => theme.colors.textSecondary};
-  }
 `;
 
 const StockRowBox = styled.div`

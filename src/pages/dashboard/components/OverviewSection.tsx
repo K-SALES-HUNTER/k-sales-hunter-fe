@@ -25,13 +25,13 @@ const OverviewSection = ({ summary }: OverviewSectionProps) => {
         <SectionLabel>매출 개요</SectionLabel>
         <RevenueRow>
           <div>
-            {/* Figma 510:4165 · 명세 DSH-01-01 #4 — 큰 숫자는 '순이익'(원), 우측 타일은 '전체 마진율'(%) */}
-            <RevenueTitle>순이익</RevenueTitle>
+            {/* Figma 12:12986 — 큰 숫자는 '매출'(원), 우측 타일은 '순이익'(%) */}
+            <RevenueTitle>매출</RevenueTitle>
             <RevenueValue>{summary.revenue.toLocaleString()}원</RevenueValue>
             <RevenueCaption>{formatDate(summary.revenueAsOf)}</RevenueCaption>
           </div>
           <ProfitTile>
-            <ProfitLabel>전체 마진율</ProfitLabel>
+            <ProfitLabel>순이익</ProfitLabel>
             <ProfitValue>{summary.netProfitRate}%</ProfitValue>
             <ProfitDelta>
               <img src={trendUpIcon} alt="" />

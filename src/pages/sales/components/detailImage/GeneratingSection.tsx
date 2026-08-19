@@ -1,6 +1,6 @@
 import styled from '@emotion/styled';
-import Button from '@/components/common/Button';
 import { generatingHeadlineMock, generatingNoticeMock } from '@/mocks/detailImage';
+import { SolidButton } from '../ui';
 import * as S from './detailImage.styled';
 
 interface GeneratingSectionProps {
@@ -36,11 +36,10 @@ const GeneratingSection = ({ progress, remainingSeconds, onCancel }: GeneratingS
       <SkeletonText>생성 중…</SkeletonText>
     </SkeletonWrap>
 
-    <CancelRow>
-      <Button variant="secondary" onClick={onCancel}>
-        생성 취소
-      </Button>
-    </CancelRow>
+    {/* Figma 12:15609 AI 생성 로딩 템플릿 — 중단 버튼은 전폭 남색 '중단하기' */}
+    <SolidButton fullWidth onClick={onCancel}>
+      중단하기
+    </SolidButton>
   </>
 );
 
@@ -106,10 +105,6 @@ const Skeleton = styled.div`
 const SkeletonText = styled.p`
   ${({ theme }) => theme.typography.caption01};
   color: ${({ theme }) => theme.colors.textSecondary};
-`;
-
-const CancelRow = styled.div`
-  display: flex;
 `;
 
 export default GeneratingSection;
