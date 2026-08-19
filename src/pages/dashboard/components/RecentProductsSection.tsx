@@ -156,9 +156,10 @@ const ChipRow = styled.div`
   gap: 10px;
 `;
 
+/* arrow-right.svg는 7.33×12.83 비율 — 정사각으로 늘리면 chevron이 뭉개진다 (Figma는 얇은 chevron) */
 const ArrowIcon = styled.img`
-  width: 22px;
-  height: 22px;
+  width: 8px;
+  height: 14px;
 `;
 
 const ViewAllButton = styled(Button)`

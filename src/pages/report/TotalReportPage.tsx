@@ -10,11 +10,26 @@ import { useTotalReport } from '@/hooks/useReport';
 import { useProduct } from '@/hooks/useProducts';
 import { buildPath, PATH } from '@/routes/paths';
 import CountryCard from './components/CountryCard';
-import ScoreBadge from './components/ScoreBadge';
 import SectionCard from './components/SectionCard';
 import * as S from './TotalReportPage.styled';
 
 const won = (value: number) => `₩${value.toLocaleString()}`;
+
+/** 판매 현황 금액 표기 (Figma 12:15740 — '₩ 1,284,000원') */
+const krw = (value: number) => `₩ ${value.toLocaleString()}원`;
+
+/** 우측 끝 흰색 chevron (Figma 12:15740 보고서 확인 CTA) */
+const CtaChevron = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden focusable="false">
+    <path
+      d="M9.5 6L15.5 12L9.5 18"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
 
 /**
  * RPT-01-01 전체 분석 보고서 (Figma 576:6776) — 라우트 /products/:productId/report
@@ -89,12 +104,14 @@ const TotalReportPage = () => {
             <S.ConclusionTitle>{report.conclusionTitle}</S.ConclusionTitle>
             <S.ConclusionParagraph>{report.conclusionBody}</S.ConclusionParagraph>
             {topCountry && (
-              <Button
-                variant="primary"
+              /* 그라데이션 풀폭 CTA (Figma 12:15740) */
+              <S.ConclusionCta
+                type="button"
                 onClick={() => navigate(buildPath.countryReport(productId, topCountry.code))}
               >
                 보고서 확인
-              </Button>
+                <CtaChevron />
+              </S.ConclusionCta>
             )}
           </S.ConclusionMain>
 
@@ -103,8 +120,8 @@ const TotalReportPage = () => {
               <S.MetricRow key={metric.label}>
                 <S.MetricLabel>{metric.label}</S.MetricLabel>
                 <S.MetricValue>
-                  {/* 경쟁 강도는 높을수록 불리 — 색 의미 반대 (invert) */}
-                  <ScoreBadge grade={metric.grade} invert={metric.invert} />
+                  {/* Figma 12:15740 — 등급은 볼드 텍스트. 원점수 병기는 명세 근거로 유지 */}
+                  <S.MetricGrade>{metric.grade}</S.MetricGrade>
                   <S.MetricScore>{metric.score}점</S.MetricScore>
                 </S.MetricValue>
               </S.MetricRow>
@@ -124,11 +141,11 @@ const TotalReportPage = () => {
           <S.SalesStatGrid>
             <S.SalesStatTile>
               <S.SalesStatLabel>총 매출</S.SalesStatLabel>
-              <S.SalesStatValue>{won(sales.totalRevenue)}</S.SalesStatValue>
+              <S.SalesStatValue>{krw(sales.totalRevenue)}</S.SalesStatValue>
             </S.SalesStatTile>
             <S.SalesStatTile>
               <S.SalesStatLabel>이번 달 매출</S.SalesStatLabel>
-              <S.SalesStatValue>{won(sales.monthRevenue)}</S.SalesStatValue>
+              <S.SalesStatValue>{krw(sales.monthRevenue)}</S.SalesStatValue>
               <S.SalesStatDelta $up={sales.monthDeltaPct >= 0}>
                 전월 대비 {sales.monthDeltaPct >= 0 ? '+' : ''}
                 {sales.monthDeltaPct}%p
@@ -154,7 +171,7 @@ const TotalReportPage = () => {
                   <S.RankBadge>{index + 1}위</S.RankBadge>
                   <S.CountryRevenueMain>
                     <span>{revenue.name}</span>
-                    <S.RevenueValue>{won(revenue.revenue)}</S.RevenueValue>
+                    <S.RevenueValue>{krw(revenue.revenue)}</S.RevenueValue>
                   </S.CountryRevenueMain>
                   <S.RowButton
                     type="button"

@@ -41,7 +41,7 @@ export const marginBasisMock = {
 /** 수익 지표에 반영된 비용 뱃지 */
 export const appliedCostBadgesMock = [
   '관세 반영',
-  '수입 VAT 반영',
+  'VAT 반영',
   '배송비 반영',
   'Shopee 수수료 반영',
   '환율 반영',
@@ -84,7 +84,7 @@ export const shippingNoticeMock =
   '※ 본 서비스는 배송을 직접 대행하지 않습니다. 상품과 판매 국가를 기준으로 권장 배송 방식을 안내하며, 실제 발송 처리는 셀러가 직접 진행해야 합니다. 선택한 배송 정보는 상세 페이지와 순이익 계산에 반영됩니다.';
 
 export const shippingInfoNoteMock =
-  '인형처럼 부피 대비 가벼운 상품은 부피 무게가 적용됩니다. 초기 테스트 판매엔 직접 배송, 주문·송장이 자동 연동되는 안정적 운영엔 SLS가 유리합니다.';
+  '초기 테스트 판매에 적합하며, Shopee 주문 시스템과 연동하기 쉬워 배송 관리 부담이 낮습니다.';
 
 /** 상품 포장 정보 기본값 (처음 입력한 값이 채워짐) */
 export const packagingMock = { weight: 250, width: 24, depth: 20, height: 16 } as const;

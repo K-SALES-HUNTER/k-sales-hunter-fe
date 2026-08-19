@@ -57,9 +57,34 @@ export const MetricValue = styled.span`
   gap: ${({ theme }) => theme.spacing.xxs};
 `;
 
+/** 등급 텍스트 (Figma 12:15740 — 배지 없이 볼드 텍스트) */
+export const MetricGrade = styled.strong`
+  ${({ theme }) => theme.typography.label02};
+  color: ${({ theme }) => theme.colors.textPrimary};
+`;
+
 export const MetricScore = styled.span`
   ${({ theme }) => theme.typography.captionStrong};
   color: ${({ theme }) => theme.colors.textSecondary};
+`;
+
+/** AI 종합 결론 그라데이션 CTA (Figma 12:15740 — gradation 배경 + 우측 chevron) */
+export const ConclusionCta = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  align-self: stretch;
+  padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
+  border-radius: ${({ theme }) => theme.radius.md};
+  background: ${({ theme }) => theme.colors.gradient};
+  ${({ theme }) => theme.typography.label02};
+  color: ${({ theme }) => theme.colors.textOnPrimary};
+  cursor: pointer;
+  transition: filter 120ms ease-out;
+
+  &:hover {
+    filter: brightness(1.08);
+  }
 `;
 
 /* ── 판매 현황 ───────────────────────────── */
@@ -161,8 +186,9 @@ export const CountryRevenueMain = styled.div`
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
-export const RevenueValue = styled.strong`
-  ${({ theme }) => theme.typography.label02};
+/** Figma 12:15740 — 금액은 국가명과 같은 레귤러 웨이트 */
+export const RevenueValue = styled.span`
+  ${({ theme }) => theme.typography.tableCell};
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 

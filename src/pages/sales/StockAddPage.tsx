@@ -2,7 +2,7 @@ import { useState } from 'react';
 import styled from '@emotion/styled';
 import { useNavigate, useParams } from 'react-router-dom';
 import arrowRightIcon from '@/assets/icons/arrow-right.svg';
-import Button from '@/components/common/Button';
+import { SolidButton } from './components/ui';
 import InputSet from '@/components/common/InputSet';
 import { stockRowsMock } from '@/mocks/sales';
 import { useSalesOpsStore } from '@/stores/useSalesOpsStore';
@@ -87,9 +87,9 @@ const StockAddPage = () => {
         {/* 전 행 0이면 반영 불가 — 이유를 문구로 안내 (OPS-02-01 #4) */}
         {!hasAddition && <Hint>추가할 수량을 입력해 주세요.</Hint>}
 
-        <Button fullWidth disabled={!hasAddition} onClick={apply}>
+        <SolidButton fullWidth disabled={!hasAddition} onClick={apply}>
           반영하기
-        </Button>
+        </SolidButton>
       </Center>
     </Screen>
   );

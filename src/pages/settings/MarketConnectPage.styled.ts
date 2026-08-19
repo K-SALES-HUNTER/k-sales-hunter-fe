@@ -99,7 +99,7 @@ export const CountryRow = styled.div<{ $connected: boolean }>`
   padding-left: ${({ theme }) => theme.spacing.md};
   border-radius: ${({ theme }) => theme.radius.md};
   border: 1px solid
-    ${({ theme, $connected }) => ($connected ? theme.colors.success : theme.colors.border)};
+    ${({ theme, $connected }) => ($connected ? theme.colors.successVivid : theme.colors.border)};
   background: ${({ theme }) => theme.colors.surface};
 `;
 
@@ -116,7 +116,7 @@ export const ConnectedBadge = styled.span`
   gap: ${({ theme }) => theme.spacing.xxs};
   padding-right: ${({ theme }) => theme.spacing.xxs};
   ${({ theme }) => theme.typography.label02};
-  color: ${({ theme }) => theme.colors.success};
+  color: ${({ theme }) => theme.colors.successVivid};
 
   img {
     width: 16px;
