@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import styled from '@emotion/styled';
-import Button from '@/components/common/Button';
 import InputSet from '@/components/common/InputSet';
 import { SALES_STEP_DELAY_MS } from '@/apis/sales';
 import {
@@ -10,7 +9,7 @@ import {
   type ShippingMethod,
   type ShippingMethodId,
 } from '@/mocks/sales';
-import { Card, CardDesc, CardTitle, NoticeBox, SubTitle, WarningText } from './ui';
+import { Card, CardDesc, CardTitle, NoticeBox, SolidButton, SubTitle, WarningText } from './ui';
 
 interface ShippingSectionProps {
   methods: ShippingMethod[];
@@ -74,10 +73,7 @@ const ShippingSection = ({
               disabled={disabled}
               onClick={() => onChange(method.id)}
             >
-              <MethodHead>
-                <MethodName>{method.name}</MethodName>
-                {method.aiRecommended && <AiBadge>AI 추천</AiBadge>}
-              </MethodHead>
+              <MethodName>{method.name}</MethodName>
               <MethodMeta>
                 <dt>예상 비용</dt>
                 <dd>{method.cost}</dd>
@@ -86,7 +82,8 @@ const ShippingSection = ({
                 <dt>기간</dt>
                 <dd>{method.period}</dd>
               </MethodMeta>
-              <MethodNote>{method.note}</MethodNote>
+              {/* Figma 12:14476 · 12:14726 — 선택된 방식의 태그는 남색 채움 */}
+              <MethodNote $selected={selected}>{method.note}</MethodNote>
             </MethodCard>
           );
         })}
@@ -97,14 +94,11 @@ const ShippingSection = ({
       <div>
         <SubTitle>상품 포장 정보</SubTitle>
         {/* 치수가 바뀌면 요금 구간이 달라져 배송비·순이익이 재계산된다 (OPS-01-01 #15) */}
-        <CardDesc>
-          포장 정보를 정확히 입력하면 배송비와 순이익 계산이 더 정확해집니다. 변경하면 이후
-          주문부터 반영됩니다.
-        </CardDesc>
+        <CardDesc>상품 포장 정보 입력 시 더욱 정확한 비용 계산이 가능합니다.</CardDesc>
         <PackGrid>
           <InputSet
             label="무게"
-            unit="g"
+            unit="(g)"
             inputMode="numeric"
             disabled={disabled}
             value={packaging.weight}
@@ -137,9 +131,9 @@ const ShippingSection = ({
         </PackGrid>
       </div>
 
-      <Button fullWidth loading={saving} disabled={disabled} onClick={savePackaging}>
+      <SolidButton fullWidth loading={saving} disabled={disabled} onClick={savePackaging}>
         저장
-      </Button>
+      </SolidButton>
     </Card>
   );
 };
@@ -174,25 +168,9 @@ const MethodCard = styled.button<{ $selected: boolean }>`
   }
 `;
 
-const MethodHead = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.spacing.xs};
-`;
-
 const MethodName = styled.strong`
   ${({ theme }) => theme.typography.label01};
   color: ${({ theme }) => theme.colors.textStrong};
-`;
-
-const AiBadge = styled.span`
-  padding: 1px 8px;
-  border-radius: ${({ theme }) => theme.radius.sm};
-  font-size: 10px;
-  font-weight: 600;
-  line-height: 15px;
-  background: ${({ theme }) => theme.colors.gradient};
-  color: ${({ theme }) => theme.colors.textOnPrimary};
 `;
 
 const MethodMeta = styled.dl`
@@ -210,12 +188,17 @@ const MethodMeta = styled.dl`
   }
 `;
 
-const MethodNote = styled.span`
+/* Figma 12:14476 · 12:14726 — 선택: 남색 채움 + 흰 글자 / 미선택: 테두리 칩 */
+const MethodNote = styled.span<{ $selected: boolean }>`
   padding: 2px 8px;
   border-radius: ${({ theme }) => theme.radius.sm};
-  background: ${({ theme }) => theme.colors.bgGray};
   ${({ theme }) => theme.typography.caption01};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  ${({ theme, $selected }) =>
+    $selected
+      ? `background: ${theme.colors.primary}; color: ${theme.colors.textOnPrimary};`
+      : `background: ${theme.colors.surface};
+         border: 1px solid ${theme.colors.border};
+         color: ${theme.colors.textSecondary};`}
 `;
 
 const PackGrid = styled.div`

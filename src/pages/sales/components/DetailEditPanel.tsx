@@ -35,7 +35,7 @@ const copyText = (value: string) => {
 /**
  * 상세 페이지 편집 패널 (DTL-01-01 #10~21, Figma 344:3063 — 우측 320px 고정) —
  * 수정 탭 클릭 시 해당 헤더로 스크롤, 텍스트 저장 시 미리보기 즉시 반영.
- * 이미지 행은 대표 지정·재생성·삭제(호버 노출)를 제공한다.
+ * 이미지 행은 대표 지정·재생성·삭제를 제공한다.
  */
 const DetailEditPanel = ({
   name,
@@ -173,7 +173,6 @@ const DetailEditPanel = ({
               {/* 마지막 1장은 삭제 불가 (최소 1장 유지) · 대표 삭제 시 자동 승격 */}
               <DeleteButton
                 type="button"
-                className={DELETE_BUTTON_CLASS}
                 aria-label={`${image.label} 삭제`}
                 disabled={images.length <= 1}
                 onClick={() => onDeleteImage(image.id)}
@@ -221,7 +220,6 @@ const DetailEditPanel = ({
             </ImageInfo>
             <DeleteButton
               type="button"
-              className={DELETE_BUTTON_CLASS}
               aria-label={`${image.label} 삭제`}
               disabled={detailImages.length <= 1}
               onClick={() => onDeleteDetailImage(image.id)}
@@ -339,12 +337,6 @@ const ImageList = styled.div`
   gap: ${({ theme }) => theme.spacing.xs};
 `;
 
-/**
- * 행 호버·포커스 시 삭제 버튼을 노출한다.
- * @emotion/babel-plugin 없이도 동작하도록 컴포넌트 셀렉터 대신 클래스명으로 연결한다.
- */
-const DELETE_BUTTON_CLASS = 'image-row-delete';
-
 const ImageRow = styled.div`
   display: flex;
   align-items: center;
@@ -353,11 +345,6 @@ const ImageRow = styled.div`
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: ${({ theme }) => theme.radius.lg};
   background: ${({ theme }) => theme.colors.surface};
-
-  &:hover .${DELETE_BUTTON_CLASS}:not(:disabled),
-  &:focus-within .${DELETE_BUTTON_CLASS}:not(:disabled) {
-    opacity: 1;
-  }
 `;
 
 const ImageThumb = styled.img`
@@ -416,7 +403,7 @@ const RegenerateButton = styled(SetMainButton)`
   color: ${({ theme }) => theme.colors.primary};
 `;
 
-/* 호버·포커스 시에만 노출되는 삭제 버튼 */
+/* Figma 12:14200 — 삭제(X) 버튼은 행에 상시 노출 */
 const DeleteButton = styled.button`
   display: flex;
   align-items: center;
@@ -425,8 +412,6 @@ const DeleteButton = styled.button`
   height: 28px;
   flex-shrink: 0;
   border-radius: ${({ theme }) => theme.radius.sm};
-  opacity: 0;
-  transition: opacity 120ms ease-out;
 
   img {
     width: 12px;
@@ -438,11 +423,8 @@ const DeleteButton = styled.button`
   }
 
   &:disabled {
-    opacity: 0;
-  }
-
-  &:focus-visible {
-    opacity: 1;
+    opacity: 0.35;
+    cursor: default;
   }
 `;
 

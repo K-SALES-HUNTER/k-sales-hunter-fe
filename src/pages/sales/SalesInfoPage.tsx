@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import styled from '@emotion/styled';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import Button from '@/components/common/Button';
 import ProductShell from '@/components/layout/ProductShell';
 import { useProduct } from '@/hooks/useProducts';
 import { useSalesInfo } from '@/hooks/useSales';
@@ -31,6 +32,8 @@ const SalesInfoPage = () => {
   const productId = Number(params.productId);
   const countryCode = params.countryCode ?? '';
 
+  const navigate = useNavigate();
+
   const { data: product } = useProduct(productId);
   const { data: salesInfo } = useSalesInfo(productId, countryCode);
 
@@ -44,12 +47,24 @@ const SalesInfoPage = () => {
   const markSalesInfoSaved = useDemoProgressStore((s) => s.markSalesInfoSaved);
   const handleSaved = () => markSalesInfoSaved(productId, countryCode);
 
+  // [DEMO-ONLY] 상세 페이지 생성 (Figma 12:14476 헤더 우측 CTA) — 1.5초 로딩 후 상세 페이지로 이동
+  const markDetailPageCreated = useDemoProgressStore((s) => s.markDetailPageCreated);
+  const [generating, setGenerating] = useState(false);
+  useEffect(() => {
+    if (!generating || !countryCode) return;
+    const timer = setTimeout(() => {
+      markDetailPageCreated(productId, countryCode);
+      navigate(buildPath.detailPage(productId, countryCode));
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [generating, productId, countryCode, navigate, markDetailPageCreated]);
+
   if (!product) return <LoadingText>판매 정보를 불러오는 중…</LoadingText>;
 
+  const country = product.countries.find((c) => c.code === countryCode);
+
   // Figma: 국가 컨텍스트 화면의 헤더 제목은 '{국가} 보고서'로 고정하고, 하위 페이지는 탭으로 구분한다
-  const countryTitle = `${
-    product.countries.find((c) => c.code === countryCode)?.name ?? countryCode
-  } 보고서`;
+  const countryTitle = `${country?.name ?? countryCode} 보고서`;
 
   const methods = salesInfo?.shippingMethods ?? shippingMethodsMock;
   const shippingCostKrw = methods.find((m) => m.id === shippingMethod)?.costKrw ?? 0;
@@ -61,13 +76,29 @@ const SalesInfoPage = () => {
       backTo={buildPath.countryReport(productId, countryCode)}
       countryCode={countryCode}
       recommendedPrompts={RECOMMENDED_PROMPTS}
+      headerAction={
+        /* Figma 12:14476 헤더 우측 — 다음 단계(상세 페이지 생성) CTA */
+        <Button
+          variant="primary"
+          loading={generating}
+          onClick={() => {
+            if (country?.hasDetailPage) {
+              navigate(buildPath.detailPage(productId, countryCode));
+              return;
+            }
+            setGenerating(true);
+          }}
+        >
+          {country?.hasDetailPage ? '상세 페이지 확인' : '상세 페이지 생성'}
+        </Button>
+      }
     >
       <PageTitle>판매 정보 입력</PageTitle>
       <SectionTabs
         tabs={[
           { label: '판매가', targetId: 'section-price' },
           { label: '옵션·재고', targetId: 'section-options' },
-          { label: '배송', targetId: 'section-shipping' },
+          { label: '배송 방식 선택', targetId: 'section-shipping' },
         ]}
       />
 

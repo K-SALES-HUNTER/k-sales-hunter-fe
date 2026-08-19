@@ -117,7 +117,19 @@ const ShippingSection = ({ shipping, initialPackaging }: ShippingSectionProps) =
           {/* 판정에 근거 조항 필수 표시 (R-004-03 RAG) */}
           {shipping.warnings.map((warning) => (
             <WarningRow key={warning}>
-              <WarningIcon aria-hidden>⚠️</WarningIcon>
+              {/* Figma 12:13779 — 붉은 경고 삼각형 (텍스트 색 상속) */}
+              <WarningIcon aria-hidden>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" focusable="false">
+                  <path d="M12 3L22.5 21H1.5L12 3Z" fill="currentColor" />
+                  <path
+                    className="warning-mark"
+                    d="M12 9.5V14.5"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                  />
+                  <circle className="warning-dot" cx="12" cy="17.4" r="1.1" />
+                </svg>
+              </WarningIcon>
               {warning}
             </WarningRow>
           ))}
@@ -272,7 +284,16 @@ const WarningRow = styled.p`
 `;
 
 const WarningIcon = styled.span`
+  display: inline-flex;
   flex-shrink: 0;
+
+  .warning-mark {
+    stroke: ${({ theme }) => theme.colors.surface};
+  }
+
+  .warning-dot {
+    fill: ${({ theme }) => theme.colors.surface};
+  }
 `;
 
 const ChangeList = styled.div`

@@ -19,6 +19,17 @@ const STAGE_CTA: Record<CountryStage, { label: string; to: (productId: number, c
   detail: { label: '상세 페이지 확인', to: buildPath.detailPage },
 };
 
+/** Figma 12:15485 — 상태 표기는 띄어쓰기 포함 ('판매 전' / '판매 중') */
+const SALES_STATUS_LABEL: Record<string, string> = {
+  판매전: '판매 전',
+  판매중: '판매 중',
+};
+
+/** Figma 12:15740 — 뱃지 표기는 '유의 필요' */
+const FIT_GRADE_LABEL: Record<string, string> = {
+  유의: '유의 필요',
+};
+
 interface CountryCardProps {
   productId: number;
   /** 진행 단계·판매 상태 (product.countries) */
@@ -39,21 +50,22 @@ const CountryCard = ({ productId, progress, result }: CountryCardProps) => {
           <Name>{progress.name}</Name>
           <EnName>{COUNTRY_EN_NAME[progress.code] ?? progress.code}</EnName>
         </div>
-        <CountryFitBadge grade={result.fitGrade} label={`${result.rank}위 · ${result.fitGrade}`} />
+        <CountryFitBadge
+          grade={result.fitGrade}
+          label={`${result.rank}위 · ${FIT_GRADE_LABEL[result.fitGrade] ?? result.fitGrade}`}
+        />
       </NameRow>
 
       <InfoRows>
         <InfoRow>
-          {/* 상세 페이지까지 만든 국가는 확정된 '판매 가격' (Figma 571:14884) */}
+          {/* 상세 페이지까지 만든 국가는 확정된 '판매 가격' (Figma 12:15485) */}
           <InfoLabel>{progress.stage === 'detail' ? '판매 가격' : '추천 판매 가격'}</InfoLabel>
-          <InfoValue>
-            {result.priceLocalText}
-            <SubValue>약 ₩{result.priceKrw.toLocaleString()}</SubValue>
-          </InfoValue>
+          {/* Figma 12:15485 — 원화 환산 단일 표기 ('약 4,000원') */}
+          <InfoValue>약 {result.priceKrw.toLocaleString()}원</InfoValue>
         </InfoRow>
         <InfoRow>
           <InfoLabel>상태</InfoLabel>
-          <InfoValue>{progress.salesStatus}</InfoValue>
+          <InfoValue>{SALES_STATUS_LABEL[progress.salesStatus] ?? progress.salesStatus}</InfoValue>
         </InfoRow>
       </InfoRows>
 
@@ -120,11 +132,6 @@ const InfoValue = styled.span`
   gap: ${({ theme }) => theme.spacing.xxs};
   ${({ theme }) => theme.typography.label02};
   color: ${({ theme }) => theme.colors.textPrimary};
-`;
-
-const SubValue = styled.span`
-  ${({ theme }) => theme.typography.caption01};
-  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const CtaButton = styled.button`

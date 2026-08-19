@@ -144,9 +144,10 @@ export const StoreCard = styled.div<{ $connected: boolean }>`
   gap: ${({ theme }) => theme.spacing.md};
   padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
   border-radius: ${({ theme }) => theme.radius.lg};
+  /* Figma 12:15303 — 연동 카드는 배경과 같은 successLight 테두리(사실상 무테) */
   border: 1px solid
     ${({ theme, $connected }) =>
-      $connected ? theme.colors.border : theme.colors.errorLight};
+      $connected ? theme.colors.successLight : theme.colors.errorLight};
   background: ${({ theme, $connected }) =>
     $connected ? theme.colors.successLight : theme.colors.errorLight};
 `;

@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import styled from '@emotion/styled';
-import Button from '@/components/common/Button';
 import Dropdown from '@/components/common/Dropdown';
 import InputSet from '@/components/common/InputSet';
 import { SALES_STEP_DELAY_MS } from '@/apis/sales';
@@ -11,10 +10,10 @@ import {
   shopeeCategoryDefaultMock,
   shopeeCategoryOptionsMock,
 } from '@/mocks/sales';
-import { Card, CardDesc, CardTitle, FieldGrid, StepBlock, SubTitle, WarningText } from './ui';
+import { Card, CardDesc, CardTitle, FieldGrid, SolidButton, StepBlock, SubTitle, WarningText } from './ui';
 
 /** 단계 순서 — 앞 단계를 저장해야 다음 단계가 열린다 (단계 종속 폼) */
-const STEP_ORDER = ['category', 'attrs', 'option1', 'option2', 'stock'] as const;
+const STEP_ORDER = ['category', 'attrs', 'option1', 'option2', 'stock', 'extra'] as const;
 type StepId = (typeof STEP_ORDER)[number];
 
 interface StockCell {
@@ -50,6 +49,7 @@ const OptionStockSection = ({ onSaved }: OptionStockSectionProps) => {
     option1: false,
     option2: false,
     stock: false,
+    extra: false,
   });
   const [saving, setSaving] = useState<StepId | null>(null);
 
@@ -89,8 +89,9 @@ const OptionStockSection = ({ onSaved }: OptionStockSectionProps) => {
 
   const getCell = (key: string): StockCell => stockCells[key] ?? { qty: '', extra: '' };
 
+  /** 재고(qty)는 stock 단계, 추가 금액(extra)은 extra 단계 저장 상태를 무효화 */
   const setCell = (key: string, patch: Partial<StockCell>) => {
-    invalidateFrom('stock');
+    invalidateFrom('qty' in patch ? 'stock' : 'extra');
     setStockCells((prev) => ({ ...prev, [key]: { ...getCell(key), ...patch } }));
   };
 
@@ -120,14 +121,14 @@ const OptionStockSection = ({ onSaved }: OptionStockSectionProps) => {
             invalidateFrom('category');
           }}
         />
-        <Button
+        <SolidButton
           fullWidth
           loading={saving === 'category'}
           disabled={category === '' || saved.category}
           onClick={() => saveStep('category')}
         >
           {saved.category ? '저장됨' : '저장'}
-        </Button>
+        </SolidButton>
       </StepBlock>
 
       {/* 2) 카테고리 속성 — 카테고리 저장 후 활성 */}
@@ -182,20 +183,21 @@ const OptionStockSection = ({ onSaved }: OptionStockSectionProps) => {
           </RadioRow>
         </RadioField>
 
-        <Button
+        <SolidButton
           fullWidth
           loading={saving === 'attrs'}
           disabled={!saved.category || saved.attrs}
           onClick={() => saveStep('attrs')}
         >
           {saved.attrs ? '저장됨' : '저장'}
-        </Button>
+        </SolidButton>
       </StepBlock>
 
       {/* 3) 1단 속성 — 카테고리 속성 저장 후 활성 */}
       <StepBlock $disabled={!saved.attrs} aria-disabled={!saved.attrs}>
         <SubTitle>1단 속성</SubTitle>
-        <FieldGrid>
+        {/* Figma 12:14476 — 옵션명 입력과 옵션값들이 2열 그리드로 흐르고 마지막 셀이 '항목 추가 +' */}
+        <OptionGrid>
           <InputSet
             label="옵션명"
             required
@@ -207,50 +209,48 @@ const OptionStockSection = ({ onSaved }: OptionStockSectionProps) => {
               invalidateFrom('option1');
             }}
           />
-          <OptionValueColumn>
-            <OptionValueLabel>옵션값</OptionValueLabel>
-            {option1Values.map((value, index) => (
-              <InputSet
-                key={index}
-                aria-label={`1단 옵션값 ${index + 1}`}
-                disabled={!saved.attrs}
-                value={value}
-                placeholder="옵션값"
-                onChange={(e) => {
-                  setOption1Values((prev) =>
-                    prev.map((v, i) => (i === index ? e.target.value : v)),
-                  );
-                  invalidateFrom('option1');
-                }}
-              />
-            ))}
-            <Button
-              variant="secondary"
+          {option1Values.map((value, index) => (
+            <InputSet
+              key={index}
+              aria-label={`1단 옵션값 ${index + 1}`}
               disabled={!saved.attrs}
-              onClick={() => {
-                setOption1Values((prev) => [...prev, '']);
+              value={value}
+              placeholder="1단 속성"
+              onChange={(e) => {
+                setOption1Values((prev) =>
+                  prev.map((v, i) => (i === index ? e.target.value : v)),
+                );
                 invalidateFrom('option1');
               }}
-            >
-              항목 추가 +
-            </Button>
-          </OptionValueColumn>
-        </FieldGrid>
-        <Button
+            />
+          ))}
+          <AddItemButton
+            type="button"
+            disabled={!saved.attrs}
+            onClick={() => {
+              setOption1Values((prev) => [...prev, '']);
+              invalidateFrom('option1');
+            }}
+          >
+            항목 추가
+            <span aria-hidden>+</span>
+          </AddItemButton>
+        </OptionGrid>
+        <SolidButton
           fullWidth
           loading={saving === 'option1'}
           disabled={!saved.attrs || saved.option1 || option1Name.trim() === '' || option1Filled.length === 0}
           onClick={() => saveStep('option1')}
         >
           {saved.option1 ? '저장됨' : '저장'}
-        </Button>
+        </SolidButton>
       </StepBlock>
 
       {/* 4) 2단 속성 — 옵션 미사용이면 숨김, 1단 저장 후 활성 */}
       {useOptions && (
         <StepBlock $disabled={!saved.option1} aria-disabled={!saved.option1}>
           <SubTitle>2단 속성</SubTitle>
-          <FieldGrid>
+          <OptionGrid>
             <InputSet
               label="옵션명"
               required
@@ -262,55 +262,51 @@ const OptionStockSection = ({ onSaved }: OptionStockSectionProps) => {
                 invalidateFrom('option2');
               }}
             />
-            <OptionValueColumn>
-              <OptionValueLabel>옵션값</OptionValueLabel>
-              {option2Values.map((value, index) => (
-                <InputSet
-                  key={index}
-                  aria-label={`2단 옵션값 ${index + 1}`}
-                  disabled={!saved.option1}
-                  value={value}
-                  placeholder="옵션값"
-                  onChange={(e) => {
-                    setOption2Values((prev) =>
-                      prev.map((v, i) => (i === index ? e.target.value : v)),
-                    );
-                    invalidateFrom('option2');
-                  }}
-                />
-              ))}
-              <Button
-                variant="secondary"
+            {option2Values.map((value, index) => (
+              <InputSet
+                key={index}
+                aria-label={`2단 옵션값 ${index + 1}`}
                 disabled={!saved.option1}
-                onClick={() => {
-                  setOption2Values((prev) => [...prev, '']);
+                value={value}
+                placeholder="2단 속성"
+                onChange={(e) => {
+                  setOption2Values((prev) =>
+                    prev.map((v, i) => (i === index ? e.target.value : v)),
+                  );
                   invalidateFrom('option2');
                 }}
-              >
-                항목 추가 +
-              </Button>
-            </OptionValueColumn>
-          </FieldGrid>
-          <Button
+              />
+            ))}
+            <AddItemButton
+              type="button"
+              disabled={!saved.option1}
+              onClick={() => {
+                setOption2Values((prev) => [...prev, '']);
+                invalidateFrom('option2');
+              }}
+            >
+              항목 추가
+              <span aria-hidden>+</span>
+            </AddItemButton>
+          </OptionGrid>
+          <SolidButton
             fullWidth
             loading={saving === 'option2'}
             disabled={!saved.option1 || saved.option2 || option2Name.trim() === '' || option2Filled.length === 0}
             onClick={() => saveStep('option2')}
           >
             {saved.option2 ? '저장됨' : '저장'}
-          </Button>
+          </SolidButton>
         </StepBlock>
       )}
 
-      {/* 5) 재고 매트릭스 — 1단×2단 조합 행 자동 생성 */}
+      {/* 5) 재고 수량 — 1단×2단 조합 행 자동 생성 (Figma 12:14476: 추가 금액과 분리된 블록) */}
       <StepBlock $disabled={!stockReady} aria-disabled={!stockReady}>
-        <SubTitle>재고 수량 · 옵션별 추가 금액</SubTitle>
-        <MatrixHeader $useOptions={useOptions}>
-          <span>1단 속성</span>
-          {useOptions && <span>2단 속성</span>}
-          <span>수량</span>
-          <span>옵션별 추가 금액</span>
-        </MatrixHeader>
+        <SubTitle>재고 수량</SubTitle>
+        <FieldLabel>
+          판매 재고
+          <RequiredMark aria-hidden>*</RequiredMark>
+        </FieldLabel>
         {stockRows.map((row) => (
           <MatrixRow key={row.key} $useOptions={useOptions}>
             <InputSet aria-label="1단 속성" value={row.v1} readOnly disabled />
@@ -324,6 +320,29 @@ const OptionStockSection = ({ onSaved }: OptionStockSectionProps) => {
               placeholder="0"
               onChange={(e) => setCell(row.key, { qty: e.target.value.replace(/[^0-9]/g, '') })}
             />
+          </MatrixRow>
+        ))}
+        {stockReady && allStockZero && (
+          <WarningText role="alert">재고가 0이면 판매할 수 없습니다.</WarningText>
+        )}
+        <SolidButton
+          fullWidth
+          loading={saving === 'stock'}
+          disabled={!stockReady || saved.stock || allStockZero}
+          onClick={() => saveStep('stock')}
+        >
+          {saved.stock ? '저장됨' : '저장'}
+        </SolidButton>
+      </StepBlock>
+
+      {/* 6) 옵션별 추가 금액 (Figma 12:14476 — 별도 블록 + 저장 버튼) */}
+      <StepBlock $disabled={!stockReady} aria-disabled={!stockReady}>
+        <SubTitle>옵션별 추가 금액</SubTitle>
+        <FieldLabel>추가 금액</FieldLabel>
+        {stockRows.map((row) => (
+          <MatrixRow key={row.key} $useOptions={useOptions}>
+            <InputSet aria-label="1단 속성" value={row.v1} readOnly disabled />
+            {useOptions && <InputSet aria-label="2단 속성" value={row.v2} readOnly disabled />}
             <InputSet
               aria-label={`${row.v1} ${row.v2} 추가 금액`}
               unit="원"
@@ -335,17 +354,14 @@ const OptionStockSection = ({ onSaved }: OptionStockSectionProps) => {
             />
           </MatrixRow>
         ))}
-        {stockReady && allStockZero && (
-          <WarningText role="alert">재고가 0이면 판매할 수 없습니다.</WarningText>
-        )}
-        <Button
+        <SolidButton
           fullWidth
-          loading={saving === 'stock'}
-          disabled={!stockReady || saved.stock || allStockZero}
-          onClick={() => saveStep('stock')}
+          loading={saving === 'extra'}
+          disabled={!stockReady || saved.extra}
+          onClick={() => saveStep('extra')}
         >
-          {saved.stock ? '저장됨' : '저장'}
-        </Button>
+          {saved.extra ? '저장됨' : '저장'}
+        </SolidButton>
       </StepBlock>
     </Card>
   );
@@ -382,31 +398,47 @@ const RadioLabel = styled.label`
   }
 `;
 
-const OptionValueColumn = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.xs};
+/* Figma 12:14476 — 옵션명·옵션값·항목 추가 버튼이 2열로 흐르는 그리드 */
+const OptionGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.sm}`};
+  align-items: end;
 `;
 
-const OptionValueLabel = styled.span`
+/* Figma 12:14476 — '항목 추가  +' (연한 배경, 텍스트 좌측 · + 우측) */
+const AddItemButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 38px;
+  padding: ${({ theme }) => `0 ${theme.spacing.md}`};
+  border-radius: ${({ theme }) => theme.radius.md};
+  background: ${({ theme }) => theme.colors.primaryLight};
+  ${({ theme }) => theme.typography.label02};
+  color: ${({ theme }) => theme.colors.textPrimary};
+
+  &:disabled {
+    color: ${({ theme }) => theme.colors.textSecondary};
+    cursor: default;
+  }
+`;
+
+/** 매트릭스 상단 필드 라벨 (Figma '판매 재고 *' · '추가 금액') */
+const FieldLabel = styled.span`
+  display: inline-flex;
+  gap: 2px;
   ${({ theme }) => theme.typography.label02};
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
-const MatrixHeader = styled.div<{ $useOptions: boolean }>`
-  display: grid;
-  grid-template-columns: repeat(${({ $useOptions }) => ($useOptions ? 4 : 3)}, minmax(0, 1fr));
-  gap: ${({ theme }) => theme.spacing.sm};
-
-  span {
-    ${({ theme }) => theme.typography.tableHeader};
-    color: ${({ theme }) => theme.colors.textSecondary};
-  }
+const RequiredMark = styled.span`
+  color: ${({ theme }) => theme.colors.error};
 `;
 
 const MatrixRow = styled.div<{ $useOptions: boolean }>`
   display: grid;
-  grid-template-columns: repeat(${({ $useOptions }) => ($useOptions ? 4 : 3)}, minmax(0, 1fr));
+  grid-template-columns: repeat(${({ $useOptions }) => ($useOptions ? 3 : 2)}, minmax(0, 1fr));
   gap: ${({ theme }) => theme.spacing.sm};
   align-items: start;
 `;

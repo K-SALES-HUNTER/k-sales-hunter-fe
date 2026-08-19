@@ -109,19 +109,28 @@ const CountryReportPage = () => {
     >
       <S.PageTop>
         <S.PageTitle>{report.name} 분석 결과</S.PageTitle>
-        {/* 헤더 CTA — 판매 정보 입력 완료(hasSalesInfo) 시에만 활성 (RPT-02-01 #3).
-            이미 생성된 뒤에는 다시 만들지 않고 해당 페이지로 이동한다 */}
+        {/* 헤더 CTA — 다음 단계로 이동 (Figma 12:13779 '판매 정보 입력' → 12:14476 '상세 페이지 생성').
+            판매 정보 입력 전에는 판매 정보 입력으로, 입력 후에는 상세 페이지 생성/확인으로 이어진다 */}
         <Button
           variant="primary"
-          disabled={!country.hasSalesInfo}
           loading={generating}
-          onClick={() =>
-            country.hasDetailPage
-              ? navigate(buildPath.detailPage(productId, country.code))
-              : setGenerating(true)
-          }
+          onClick={() => {
+            if (!country.hasSalesInfo) {
+              navigate(buildPath.salesInfo(productId, country.code));
+              return;
+            }
+            if (country.hasDetailPage) {
+              navigate(buildPath.detailPage(productId, country.code));
+              return;
+            }
+            setGenerating(true);
+          }}
         >
-          {country.hasDetailPage ? '상세 페이지 확인' : '상세 페이지 생성'}
+          {!country.hasSalesInfo
+            ? '판매 정보 입력'
+            : country.hasDetailPage
+              ? '상세 페이지 확인'
+              : '상세 페이지 생성'}
         </Button>
       </S.PageTop>
 
@@ -147,12 +156,29 @@ const CountryReportPage = () => {
             <S.ConclusionMain>
               <S.ConclusionTitle>{report.conclusion.title}</S.ConclusionTitle>
               <S.ConclusionParagraph>{report.conclusion.body}</S.ConclusionParagraph>
-              <Button
-                variant="primary"
+              {/* 그라데이션 풀폭 CTA (Figma 12:13779) */}
+              <S.ConclusionCta
+                type="button"
                 onClick={() => navigate(buildPath.salesInfo(productId, country.code))}
               >
                 판매 정보 입력
-              </Button>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden
+                  focusable="false"
+                >
+                  <path
+                    d="M9.5 6L15.5 12L9.5 18"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </S.ConclusionCta>
             </S.ConclusionMain>
             <S.InfoList>
               <S.InfoRow>

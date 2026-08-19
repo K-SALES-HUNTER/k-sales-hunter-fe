@@ -100,6 +100,25 @@ export const ConclusionParagraph = styled.p`
   color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
+/** AI 종합 결론 그라데이션 CTA (Figma 12:13779 — gradation 배경 + 우측 chevron) */
+export const ConclusionCta = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  align-self: stretch;
+  padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
+  border-radius: ${({ theme }) => theme.radius.md};
+  background: ${({ theme }) => theme.colors.gradient};
+  ${({ theme }) => theme.typography.label02};
+  color: ${({ theme }) => theme.colors.textOnPrimary};
+  cursor: pointer;
+  transition: filter 120ms ease-out;
+
+  &:hover {
+    filter: brightness(1.08);
+  }
+`;
+
 export const InfoList = styled.div`
   width: 240px;
   flex-shrink: 0;

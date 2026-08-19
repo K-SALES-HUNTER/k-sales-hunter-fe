@@ -96,10 +96,11 @@ const PriceSection = ({ costPrice, shippingCostKrw, scenarios }: PriceSectionPro
         placeholder="판매가를 입력해 주세요"
       />
 
+      {/* Figma 12:14476 안내 문구 */}
       {unitProfit !== null && (
         <NoticeBox>
-          {formatPrice(finalPrice)}에 판매할 경우, 관세·VAT·수수료·국제 배송비를 제외하고 상품
-          1개당 약 {formatPrice(unitProfit)}의 순이익이 예상됩니다.
+          {formatPrice(finalPrice)}에 판매할 경우, 관세·현지 부가세·국제 배송비·Shopee 수수료를
+          모두 제외하고 상품 1개당 약 {formatPrice(unitProfit)}의 순이익이 예상됩니다.
         </NoticeBox>
       )}
 
@@ -171,16 +172,19 @@ const ScenarioProfit = styled.span`
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
+/* Figma 12:14476 — 선택: 남색 채움 / 미선택: 테두리 칩 */
 const ScenarioBadge = styled.span<{ $selected: boolean }>`
   padding: 1px 8px;
   border-radius: ${({ theme }) => theme.radius.sm};
   font-size: 10px;
   font-weight: 600;
   line-height: 15px;
-  background: ${({ theme, $selected }) =>
-    $selected ? theme.colors.primary : theme.colors.bgGray};
-  color: ${({ theme, $selected }) =>
-    $selected ? theme.colors.textOnPrimary : theme.colors.textSecondary};
+  ${({ theme, $selected }) =>
+    $selected
+      ? `background: ${theme.colors.primary}; color: ${theme.colors.textOnPrimary};`
+      : `background: ${theme.colors.surface};
+         border: 1px solid ${theme.colors.border};
+         color: ${theme.colors.textSecondary};`}
 `;
 
 const BadgeRow = styled.div`
@@ -189,15 +193,16 @@ const BadgeRow = styled.div`
   gap: ${({ theme }) => theme.spacing.xxs};
 `;
 
+/* Figma 12:14476 — 반영 비용 뱃지는 연초록 배경 + 초록 텍스트 */
 const CostBadge = styled.span`
   display: inline-flex;
   align-items: center;
   gap: ${({ theme }) => theme.spacing.xxs};
   padding: 2px 8px;
   border-radius: ${({ theme }) => theme.radius.sm};
-  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.successLight};
   ${({ theme }) => theme.typography.caption01};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.success};
 
   img {
     width: 10px;

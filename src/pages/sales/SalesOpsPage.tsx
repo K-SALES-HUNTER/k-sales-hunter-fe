@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import styled from '@emotion/styled';
 import { useNavigate, useParams } from 'react-router-dom';
+import aiSparkleIcon from '@/assets/icons/ai-sparkle.svg';
 import salesCopyIcon from '@/assets/icons/sales-copy.svg';
 import AreaTrendChart from '@/components/charts/AreaTrendChart';
 import BarChart from '@/components/charts/BarChart';
@@ -87,6 +88,19 @@ const SalesOpsPage = () => {
       backTo={buildPath.totalReport(productId)}
       countryCode={countryCode}
       recommendedPrompts={RECOMMENDED_PROMPTS}
+      headerAction={
+        /* Figma 12:14726 · 12:15876 — 판매 중단/재개 버튼은 헤더 우측 */
+        stopped ? (
+          <Button variant="primary" onClick={() => setStatus(key, '판매중')}>
+            판매 재개
+          </Button>
+        ) : (
+          /* 판매 중단은 되돌릴 수 없는 동작 — 실행 전 모달 확인 필수 (OPS-01-01 #5) */
+          <Button variant="secondary" onClick={() => setStopModalOpen(true)}>
+            판매 중단
+          </Button>
+        )
+      }
     >
       {/* 판매 중단 상태 배너 (OPS-01-02 #1~2) — 중단 상태에서도 섹션 탭은 그대로 노출 */}
       {stopped && (
@@ -104,45 +118,30 @@ const SalesOpsPage = () => {
 
       <PageTitle>판매 현황</PageTitle>
 
-      <TopRow>
-        <SectionTabs
-          tabs={[
-            { label: '판매 요약', targetId: 'section-status' },
-            { label: '상품 정보', targetId: 'section-info' },
-            { label: '주문 관리', targetId: 'section-orders' },
-            { label: '배송 정보', targetId: 'section-ops-shipping' },
-            { label: '판매 성과', targetId: 'section-performance' },
-            { label: '가격 관리', targetId: 'section-price-manage' },
-          ]}
-        />
-        {/* 판매 중단은 되돌릴 수 없는 동작 — 실행 전 모달 확인 필수 (OPS-01-01 #5) */}
-        {stopped ? (
-          <Button variant="primary" onClick={() => setStatus(key, '판매중')}>
-            판매 재개
-          </Button>
-        ) : (
-          <Button variant="warning" onClick={() => setStopModalOpen(true)}>
-            판매 중단
-          </Button>
-        )}
-      </TopRow>
+      <SectionTabs
+        tabs={[
+          { label: '판매 요약', targetId: 'section-status' },
+          { label: '상품 정보', targetId: 'section-info' },
+          { label: '주문 관리', targetId: 'section-orders' },
+          { label: '배송 정보', targetId: 'section-ops-shipping' },
+          { label: '판매 성과', targetId: 'section-performance' },
+          { label: '가격 관리', targetId: 'section-price-manage' },
+        ]}
+      />
 
       {ops && (
         <>
-          {/* 판매 상태 요약 */}
-          <Card id="section-status" aria-labelledby="status-title">
-            <div>
+          {/* 판매 상태 요약 (Figma 12:14726) — 카드 없이 스파클 아이콘 + 헤드라인 + 설명 */}
+          <SummaryBlock id="section-status" aria-labelledby="status-title">
+            <SummaryHead>
+              <SparkleBadge aria-hidden>
+                <img src={aiSparkleIcon} alt="" />
+              </SparkleBadge>
               <CardTitle id="status-title">판매 상태 요약</CardTitle>
-              <Headline>{ops.summary.headline}</Headline>
-              <CardDesc>{ops.summary.description}</CardDesc>
-            </div>
-            <ChartLabel>최근 30일 판매 흐름</ChartLabel>
-            <AreaTrendChart
-              data={[...ops.summary.trend]}
-              height={72}
-              formatValue={(v) => `${v}개`}
-            />
-          </Card>
+            </SummaryHead>
+            <Headline>{ops.summary.headline}</Headline>
+            <CardDesc>{ops.summary.description}</CardDesc>
+          </SummaryBlock>
 
           {/* 상세 페이지 링크 (상품 정보) */}
           <Card id="section-info" aria-labelledby="link-title">
@@ -181,31 +180,31 @@ const SalesOpsPage = () => {
             </MetaGrid>
           </Card>
 
-          {/* 주문·클레임 현황 */}
-          <OrderClaimSection
-            summary={ops.orders.summary}
-            rows={[...ops.orders.rows]}
-            disabled={stopped}
-          />
-
-          {/* 판매량 추이 — 수량 기준 (재고 소진 속도 가늠) */}
-          <Card aria-labelledby="trend-title">
-            <div>
-              <CardTitle id="trend-title">판매량 추이</CardTitle>
-              <CardDesc>금액이 아닌 판매 수량 기준입니다. 재고 소진 속도를 가늠해 보세요.</CardDesc>
-            </div>
-            <BarChart data={[...ops.salesTrend]} height={140} formatValue={(v) => `${v}개`} />
+          {/* 주문·클레임 현황 + 재고 관리 — Figma 12:14726 기준 한 카드 */}
+          <Card aria-label="주문·클레임 현황 및 재고 관리">
+            <OrderClaimSection
+              summary={ops.orders.summary}
+              rows={[...ops.orders.rows]}
+              disabled={stopped}
+            />
+            <StockManageSection
+              rows={stockRows}
+              disabled={stopped}
+              onAddStock={() => navigate(buildPath.stockAdd(productId))}
+              onEditOptions={() => navigate(buildPath.salesInfo(productId, countryCode))}
+            />
           </Card>
 
-          {/* 재고 관리 */}
-          <StockManageSection
-            rows={stockRows}
+          {/* 배송 방식·포장 정보 — 변경 시 지표 재계산(목), 중단 상태 비활성 */}
+          <ShippingSection
+            id="section-ops-shipping"
+            methods={shippingMethodsMock}
+            value={shippingMethod}
+            onChange={setShippingMethod}
             disabled={stopped}
-            onAddStock={() => navigate(buildPath.stockAdd(productId))}
-            onEditOptions={() => navigate(buildPath.salesInfo(productId, countryCode))}
           />
 
-          {/* 판매 성과 — 지표 5종 + 월간 매출·수익 추이 + 총 비용 차감 구조 */}
+          {/* 판매 성과 — 지표 5종 + 판매량·월간 매출/수익 추이 + 총 비용 차감 구조 */}
           <Card id="section-performance" aria-labelledby="performance-title">
             <CardHeader>
               <CardTitle id="performance-title">판매 성과</CardTitle>
@@ -235,58 +234,70 @@ const SalesOpsPage = () => {
               </StatBox>
             </StatGrid>
 
-            {/* 월간 매출·수익 추이 — 매출 막대 위에 순이익을 함께 표기 */}
-            <div>
-              <ChartLabel>월간 매출·수익 추이</ChartLabel>
-              <BarChart
-                data={ops.performance.monthlyRevenue.map((m) => ({
-                  label: m.label,
-                  value: m.revenue,
-                }))}
-                height={140}
-                formatValue={(v) => `₩${v.toLocaleString()}`}
-              />
-              {/* 범례는 차트에 그려진 기간의 합계 — 상단 지표(최근 30일)와 기간이 다르다 */}
-              <LegendRow>
-                <LegendItem>매출 ₩{monthlyTotal.revenue.toLocaleString()}</LegendItem>
-                <LegendItem $tone="positive">
-                  순이익 ₩{monthlyTotal.profit.toLocaleString()}
-                </LegendItem>
-              </LegendRow>
-            </div>
+            {/* Figma 12:14726 — 좌: 판매량 라인차트, 우: 월간 매출/수익 추이 막대차트 */}
+            <ChartRow>
+              <ChartCol>
+                <QtyLegend>
+                  <LegendSwatch aria-hidden />
+                  판매량
+                </QtyLegend>
+                <AreaTrendChart
+                  data={[...ops.salesTrend]}
+                  height={140}
+                  formatValue={(v) => `${v}개`}
+                />
+              </ChartCol>
+              <ChartCol>
+                <ChartLabel>월간 매출/수익 추이</ChartLabel>
+                <BarChart
+                  data={ops.performance.monthlyRevenue.map((m) => ({
+                    label: m.label,
+                    value: m.revenue,
+                  }))}
+                  height={140}
+                  formatValue={(v) => `₩${v.toLocaleString()}`}
+                />
+                {/* 범례는 차트에 그려진 기간의 합계 — 상단 지표(최근 30일)와 기간이 다르다 */}
+                <LegendRow>
+                  <LegendItem>매출 ₩{monthlyTotal.revenue.toLocaleString()}</LegendItem>
+                  <LegendItem $tone="positive">
+                    순이익 ₩{monthlyTotal.profit.toLocaleString()}
+                  </LegendItem>
+                </LegendRow>
+              </ChartCol>
+            </ChartRow>
 
             {/* 총 비용 차감 구조 — 순이익 산출 과정 단계별 공개 */}
             <div>
               <SubTitle>총 비용 차감 구조 (판매가 → 순이익)</SubTitle>
               <CostTable>
                 <tbody>
-                  {ops.performance.costBreakdown.map((row) => (
-                    <CostRow key={row.label} $emphasis={'emphasis' in row && Boolean(row.emphasis)}>
+                  {/* Figma 12:14726 — 첫 행(총 매출)과 마지막 행(예상 순이익)을 강조 */}
+                  {ops.performance.costBreakdown.map((row, index) => (
+                    <CostRow
+                      key={row.label}
+                      $emphasis={index === 0 || ('emphasis' in row && Boolean(row.emphasis))}
+                    >
                       <td>{row.label}</td>
                       <td>{row.amountText}</td>
                     </CostRow>
                   ))}
                 </tbody>
               </CostTable>
+              {/* Figma 12:14726 — 셰브런 + 텍스트형 토글 */}
               <BasisToggle
                 type="button"
                 aria-expanded={basisOpen}
                 onClick={() => setBasisOpen((prev) => !prev)}
               >
-                계산 기준 {basisOpen ? '닫기' : '보기'}
+                <BasisChevron aria-hidden $open={basisOpen}>
+                  ⌄
+                </BasisChevron>
+                계산 기준 보기
               </BasisToggle>
               {basisOpen && <NoticeBox>{ops.performance.calcBasis}</NoticeBox>}
             </div>
           </Card>
-
-          {/* 배송 방식·포장 정보 — 변경 시 지표 재계산(목), 중단 상태 비활성 */}
-          <ShippingSection
-            id="section-ops-shipping"
-            methods={shippingMethodsMock}
-            value={shippingMethod}
-            onChange={setShippingMethod}
-            disabled={stopped}
-          />
 
           {/* 가격 관리 */}
           <PriceManageSection
@@ -320,22 +331,6 @@ const SalesOpsPage = () => {
     </ProductShell>
   );
 };
-
-/**
- * 섹션 탭 + 판매 중단/재개 버튼 한 줄.
- * 탭이 스크롤 중에도 고정되도록 이 행 자체를 sticky로 둔다
- * (`--shell-sticky-h`는 ProductShell이 고정 스택 높이를 실측해 넣어주는 값).
- */
-const TopRow = styled.div`
-  position: sticky;
-  top: var(--shell-sticky-h, 197px);
-  z-index: 9;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => theme.colors.surface};
-`;
 
 const PageTitle = styled.h2`
   padding: ${({ theme }) => `0 ${theme.spacing.xs}`};
@@ -375,6 +370,36 @@ const StopDesc = styled.p`
   color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
+/* 판매 상태 요약 (Figma 12:14726) — 카드 테두리 없는 블록 */
+const SummaryBlock = styled.section`
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.spacing.xs};
+  padding: ${({ theme }) => `0 ${theme.spacing.xs}`};
+`;
+
+const SummaryHead = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.xs};
+`;
+
+const SparkleBadge = styled.span`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: ${({ theme }) => theme.colors.bgLight};
+
+  img {
+    width: 18px;
+    height: 18px;
+  }
+`;
+
 const Headline = styled.p`
   margin-top: ${({ theme }) => theme.spacing.xxs};
   ${({ theme }) => theme.typography.heading03};
@@ -399,6 +424,38 @@ const HeaderNote = styled.span`
   ${({ theme }) => theme.typography.caption01};
   color: ${({ theme }) => theme.colors.textSecondary};
   white-space: nowrap;
+`;
+
+/* Figma 12:14726 — 판매량 라인차트와 월간 매출/수익 막대차트 2열 */
+const ChartRow = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: ${({ theme }) => theme.spacing.lg};
+
+  @media (max-width: 1279px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const ChartCol = styled.div`
+  min-width: 0;
+`;
+
+/* '— 판매량' 범례 (Figma 12:14726 좌측 차트) */
+const QtyLegend = styled.span`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.xxs};
+  margin-bottom: ${({ theme }) => theme.spacing.xs};
+  ${({ theme }) => theme.typography.captionStrong};
+  color: ${({ theme }) => theme.colors.textPrimary};
+`;
+
+const LegendSwatch = styled.span`
+  width: 16px;
+  height: 2px;
+  border-radius: 1px;
+  background: ${({ theme }) => theme.colors.primary};
 `;
 
 const LegendRow = styled.div`
@@ -438,19 +495,26 @@ const CostRow = styled.tr<{ $emphasis: boolean }>`
       : ''}
 `;
 
+/* Figma 12:14726 — 테두리 없는 셰브런 + 텍스트 토글 */
 const BasisToggle = styled.button`
   display: inline-flex;
   align-items: center;
+  gap: ${({ theme }) => theme.spacing.xxs};
   margin-top: ${({ theme }) => theme.spacing.sm};
-  padding: ${({ theme }) => `${theme.spacing.xxs} ${theme.spacing.sm}`};
-  border-radius: ${({ theme }) => theme.radius.sm};
-  border: 1px solid ${({ theme }) => theme.colors.border};
+  padding: ${({ theme }) => `${theme.spacing.xxs} 0`};
   ${({ theme }) => theme.typography.caption01};
   color: ${({ theme }) => theme.colors.textPrimary};
 
   &:hover {
-    background: ${({ theme }) => theme.colors.bgLight};
+    color: ${({ theme }) => theme.colors.textStrong};
   }
+`;
+
+const BasisChevron = styled.span<{ $open: boolean }>`
+  display: inline-flex;
+  line-height: 1;
+  transform: ${({ $open }) => ($open ? 'rotate(180deg)' : 'none')};
+  transition: transform 120ms ease-out;
 `;
 
 const LinkRow = styled.div`
