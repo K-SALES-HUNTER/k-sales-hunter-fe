@@ -46,6 +46,13 @@ const ShippingSection = ({
   const setPack = (key: keyof typeof packaging, raw: string) =>
     setPackaging((prev) => ({ ...prev, [key]: raw.replace(/[^0-9.]/g, '') }));
 
+  /**
+   * 포장 치수(가로·세로·높이)는 AI가 상품 정보로 추정해 미리 채워 둔 값이라 그라데이션 텍스트.
+   * 무게는 셀러가 상품 등록에서 직접 입력한 값이므로 대상이 아니다.
+   */
+  const isAiPack = (key: 'width' | 'depth' | 'height') =>
+    packaging[key] === String(packagingMock[key]);
+
   const savePackaging = () => {
     setSaving(true);
     setTimeout(() => {
@@ -108,6 +115,7 @@ const ShippingSection = ({
             label="가로"
             unit="cm"
             inputMode="numeric"
+            aiFilled={isAiPack('width')}
             disabled={disabled}
             value={packaging.width}
             onChange={(e) => setPack('width', e.target.value)}
@@ -116,6 +124,7 @@ const ShippingSection = ({
             label="세로"
             unit="cm"
             inputMode="numeric"
+            aiFilled={isAiPack('depth')}
             disabled={disabled}
             value={packaging.depth}
             onChange={(e) => setPack('depth', e.target.value)}
@@ -124,6 +133,7 @@ const ShippingSection = ({
             label="높이"
             unit="cm"
             inputMode="numeric"
+            aiFilled={isAiPack('height')}
             disabled={disabled}
             value={packaging.height}
             onChange={(e) => setPack('height', e.target.value)}

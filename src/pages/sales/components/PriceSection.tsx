@@ -51,6 +51,9 @@ const PriceSection = ({ costPrice, shippingCostKrw, scenarios }: PriceSectionPro
       ? Math.ceil(marginBasisMock.fixedCostKrw / unitProfit)
       : null;
 
+  // 가격안에서 그대로 들어온 값이면 'AI가채움'(그라데이션), 직접 타이핑하면 사용자 입력으로 승격
+  const priceFromScenario = scenarios.some((s) => s.price === finalPrice);
+
   const selectScenario = (scenario: PriceScenario) => {
     setSelectedId(scenario.id);
     // 선택한 가격안이 최종 판매가의 디폴트 입력값이 된다 (추가 수정 가능)
@@ -90,6 +93,7 @@ const PriceSection = ({ costPrice, shippingCostKrw, scenarios }: PriceSectionPro
         required
         unit="원"
         inputMode="numeric"
+        aiFilled={priceFromScenario}
         value={finalPrice > 0 ? finalPrice.toLocaleString() : ''}
         onChange={(e) => setFinalPriceRaw(e.target.value.replace(/[^0-9]/g, ''))}
         error={belowCost ? '공급 원가보다 낮은 가격입니다. 손실이 발생합니다' : undefined}

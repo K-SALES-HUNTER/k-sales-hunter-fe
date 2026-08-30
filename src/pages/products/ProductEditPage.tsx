@@ -6,7 +6,6 @@ import Button from '@/components/common/Button';
 import Modal from '@/components/common/Modal';
 import { useProductForm, type ProductFormValues } from '@/hooks/useProductForm';
 import { useProduct } from '@/hooks/useProducts';
-import { PATH } from '@/routes/paths';
 import type { Product } from '@/types/product';
 import FormPageHeader from './components/FormPageHeader';
 import ProductForm from './components/ProductForm';
@@ -68,7 +67,7 @@ const ProductEditPage = () => {
     return (
       <FormPageHeader
         title="상품 수정"
-        backTo={PATH.PRODUCTS}
+        backTo={-1}
         actionLabel="저장"
         actionDisabled
         onAction={() => {}}
@@ -144,7 +143,7 @@ const ProductEditView = ({ product }: { product: Product }) => {
     <>
       <FormPageHeader
         title="상품 수정"
-        backTo={PATH.PRODUCTS}
+        backTo={-1}
         hint={
           form.aiFillDone
             ? '입력하지 않은 항목을 AI가 알아서 채웠어요!'

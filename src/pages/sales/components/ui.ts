@@ -35,14 +35,14 @@ export const SubTitle = styled.h3`
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
-/** 카드 안 하위 단계 블록 (제목 + 입력 묶음) */
-export const StepBlock = styled.div<{ $disabled?: boolean }>`
+/**
+ * 카드 안 하위 단계 블록 (제목 + 입력 묶음).
+ * 순차 노출 폼: 앞 단계를 저장하기 전의 뒤 단계는 disabled로 흐리게 두지 않고 아예 렌더하지 않는다.
+ */
+export const StepBlock = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${({ theme }) => theme.spacing.sm};
-  opacity: ${({ $disabled }) => ($disabled ? 0.45 : 1)};
-  pointer-events: ${({ $disabled }) => ($disabled ? 'none' : 'auto')};
-  transition: opacity 120ms ease-out;
 `;
 
 export const FieldGrid = styled.div<{ $columns?: number }>`
@@ -67,10 +67,11 @@ export const StatLabel = styled.span`
   color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
+/* Figma 12:14726 스탯 타일 — 값은 16px 볼드 (heading03은 타일 대비 과대) */
 export const StatValue = styled.strong<{ $tone?: 'default' | 'positive' }>`
-  ${({ theme }) => theme.typography.heading03};
+  ${({ theme }) => theme.typography.label01};
   color: ${({ theme, $tone }) =>
-    $tone === 'positive' ? theme.colors.success : theme.colors.textStrong};
+    $tone === 'positive' ? theme.colors.success : theme.colors.textPrimary};
 `;
 
 export const StatGrid = styled.div<{ $columns?: number }>`

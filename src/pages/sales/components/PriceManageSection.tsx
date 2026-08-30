@@ -47,14 +47,14 @@ const PriceManageSection = ({
         <FxBadge title={fxNote}>실시간 환율 적용</FxBadge>
       </HeaderRow>
 
-      {note && <NoticeBox>{note}</NoticeBox>}
+      {note && <PriceNotice>{note}</PriceNotice>}
 
-      {/* Figma 12:14726 — 가격 변경은 필수 입력(*), 우측 저장 버튼 */}
+      {/* Figma 12:14726 — 가격 변경은 필수 입력(*), 현지 통화(VND) 단위, 우측 저장 버튼 */}
       <PriceRow>
         <InputSet
           label="가격 변경"
           required
-          unit="원"
+          unit="VND"
           inputMode="numeric"
           disabled={disabled}
           value={price > 0 ? price.toLocaleString() : ''}
@@ -128,14 +128,19 @@ const HeaderRow = styled.div`
   gap: ${({ theme }) => theme.spacing.sm};
 `;
 
-/** 실시간 환율 적용 뱃지 (Figma 597:9774) */
+/** 실시간 환율 적용 뱃지 (Figma 12:14726) — 연보라(라이트 네이비) 배경 + 네이비 텍스트 */
 const FxBadge = styled.span`
   padding: ${({ theme }) => `2px ${theme.spacing.xs}`};
   border-radius: ${({ theme }) => theme.radius.sm};
-  background: ${({ theme }) => theme.colors.bgLight};
+  background: ${({ theme }) => theme.colors.primaryLight};
   ${({ theme }) => theme.typography.captionStrong};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.primary};
   white-space: nowrap;
+`;
+
+/* Figma 12:14726 — 가격 판단 안내 문구는 회색 텍스트 */
+const PriceNotice = styled(NoticeBox)`
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const PriceRow = styled.div`
