@@ -7,7 +7,8 @@ import * as S from './formPage.styled';
 interface FormPageHeaderProps {
   title: string;
   /** 뒤로가기 목적지 — 논리적 상위 화면 */
-  backTo: string;
+  /** 뒤로가기 목적지. -1이면 브라우저 이전 페이지로 돌아간다 */
+  backTo: string | -1;
   /** 버튼 왼쪽 안내 문구 (sparkle 아이콘과 함께) */
   hint?: string;
   /** 우측 상단 단일 버튼 라벨 — '자동 채우기' / '등록' / '저장' */
@@ -36,7 +37,7 @@ const FormPageHeader = ({
   return (
     <S.Header>
       <S.TitleRow>
-        <S.BackButton type="button" aria-label="뒤로 가기" onClick={() => navigate(backTo)}>
+        <S.BackButton type="button" aria-label="뒤로 가기" onClick={() => (backTo === -1 ? navigate(-1) : navigate(backTo))}>
           <ChevronIcon size={32} />
         </S.BackButton>
         <S.Title>{title}</S.Title>

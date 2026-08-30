@@ -57,6 +57,12 @@ const DetailEditPanel = ({
   const [nameDraft, setNameDraft] = useState(name);
   const [descDraft, setDescDraft] = useState(description);
   const [activeTab, setActiveTab] = useState<'text' | 'image'>('text');
+  /**
+   * 상품명·상세 설명은 AI가 써 준 초안이라 그라데이션 텍스트로 시작하고,
+   * 셀러가 한 글자라도 고치면 사용자 문장으로 승격되어 일반 텍스트가 된다.
+   */
+  const [nameIsAi, setNameIsAi] = useState(true);
+  const [descIsAi, setDescIsAi] = useState(true);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const detailImageInputRef = useRef<HTMLInputElement>(null);
 
@@ -112,8 +118,12 @@ const DetailEditPanel = ({
         </LabelRow>
         <InputSet
           aria-label="상품명"
+          aiFilled={nameIsAi}
           value={nameDraft}
-          onChange={(e) => setNameDraft(e.target.value)}
+          onChange={(e) => {
+            setNameDraft(e.target.value);
+            setNameIsAi(false);
+          }}
         />
       </Field>
 
@@ -132,8 +142,12 @@ const DetailEditPanel = ({
         <TextareaSet
           aria-label="상세 설명"
           rows={5}
+          aiFilled={descIsAi}
           value={descDraft}
-          onChange={(e) => setDescDraft(e.target.value)}
+          onChange={(e) => {
+            setDescDraft(e.target.value);
+            setDescIsAi(false);
+          }}
         />
       </Field>
 

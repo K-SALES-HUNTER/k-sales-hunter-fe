@@ -5,6 +5,7 @@ import reportNextActionIcon from '@/assets/icons/report-next-action.svg';
 import reportSearchIcon from '@/assets/icons/report-search.svg';
 import AreaTrendChart from '@/components/charts/AreaTrendChart';
 import Button from '@/components/common/Button';
+import CtaChevron from '@/components/common/CtaChevron';
 import ProductShell from '@/components/layout/ProductShell';
 import { useTotalReport } from '@/hooks/useReport';
 import { useProduct } from '@/hooks/useProducts';
@@ -17,19 +18,6 @@ const won = (value: number) => `₩${value.toLocaleString()}`;
 
 /** 판매 현황 금액 표기 (Figma 12:15740 — '₩ 1,284,000원') */
 const krw = (value: number) => `₩ ${value.toLocaleString()}원`;
-
-/** 우측 끝 흰색 chevron (Figma 12:15740 보고서 확인 CTA) */
-const CtaChevron = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden focusable="false">
-    <path
-      d="M9.5 6L15.5 12L9.5 18"
-      stroke="currentColor"
-      strokeWidth="2.2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
 
 /**
  * RPT-01-01 전체 분석 보고서 (Figma 576:6776) — 라우트 /products/:productId/report

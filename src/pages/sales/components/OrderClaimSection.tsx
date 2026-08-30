@@ -70,7 +70,7 @@ const OrderClaimSection = ({ summary, rows, disabled = false }: OrderClaimSectio
         <EmptyText>아직 들어온 주문이 없습니다. 주문이 생기면 여기에 표시됩니다.</EmptyText>
       ) : (
         <TableScroll>
-          <Table>
+          <OrderTable>
             <thead>
               <tr>
                 <th scope="col">주문일</th>
@@ -106,7 +106,7 @@ const OrderClaimSection = ({ summary, rows, disabled = false }: OrderClaimSectio
                       aria-label={`${row.orderNo} 클레임 처리 상태`}
                       options={toOptions(orderClaimStatusOptions)}
                       value={claimStatus[row.id] ?? row.claimStatus}
-                      disabled={disabled || row.claim === '—'}
+                      disabled={disabled || row.claim === '없음'}
                       onChange={(e) =>
                         setClaimStatus((prev) => ({ ...prev, [row.id]: e.target.value }))
                       }
@@ -115,7 +115,7 @@ const OrderClaimSection = ({ summary, rows, disabled = false }: OrderClaimSectio
                 </tr>
               ))}
             </tbody>
-          </Table>
+          </OrderTable>
         </TableScroll>
       )}
 
@@ -130,6 +130,14 @@ const Section = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${({ theme }) => theme.spacing.md};
+`;
+
+/* Figma 12:14726 — 주문 테이블 헤더는 배경 없이 흰 바탕 + 하단 헤어라인 (가격 관리 표와 다름) */
+const OrderTable = styled(Table)`
+  th {
+    background: transparent;
+    border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  }
 `;
 
 const DropdownCell = styled.td`

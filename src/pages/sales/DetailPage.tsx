@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import styled from '@emotion/styled';
 import { useNavigate, useParams } from 'react-router-dom';
 import Button from '@/components/common/Button';
+import CtaChevron from '@/components/common/CtaChevron';
 import Modal from '@/components/common/Modal';
 import ProductShell from '@/components/layout/ProductShell';
 import { useProduct } from '@/hooks/useProducts';
@@ -22,8 +23,10 @@ import {
   type DetailImageEntry,
 } from '@/stores/useDetailImageStore';
 import { useDemoProgressStore } from '@/stores/useDemoProgressStore';
+import type { ConnectedStore } from '@/types/settings';
 import DetailEditPanel from './components/DetailEditPanel';
 import PdpPreview from './components/PdpPreview';
+import { Card, CardDesc, CardTitle } from './components/ui';
 
 const RECOMMENDED_PROMPTS = ['더 고급스럽게 만들어줘', '상품 정보 더 자세하게', '이 정보 반영해줘'];
 
@@ -39,7 +42,7 @@ const DetailPage = () => {
 
   const { data: product } = useProduct(productId);
   const { data: detail } = useDetailContent(productId, countryCode);
-  const { data: stores } = useConnectedStores();
+  const { data: stores, isPending: storesLoading } = useConnectedStores();
   const markUploaded = useDemoProgressStore((s) => s.markUploaded);
   const navigate = useNavigate();
 
@@ -67,20 +70,29 @@ const DetailPage = () => {
     }, 1600);
   };
 
-  /** 연동 전이면 설정으로, 업로드 후에는 판매 관리로 — 그 외에는 오토 업로드 */
-  const headerAction = !store ? (
-    <Button variant="secondary" onClick={() => navigate(`${PATH.SETTINGS}?tab=marketplace`)}>
-      스토어 연동하기
-    </Button>
-  ) : uploaded ? (
+  /**
+   * 업로드 후에는 판매 관리로, 연동 전이면 설정으로 — 그 외에는 오토 업로드.
+   * QA-8: 연동 정보 로딩 중(stores === undefined)에는 미연동으로 단정하지 않고
+   * '오토 업로드'를 로딩 상태로 보류한다. (재진입 시 쿼리 refetch 동안 '스토어 연동하기' 오표시 방지)
+   */
+  const headerAction = uploaded ? (
     <Button
       variant="secondary"
       onClick={() => navigate(buildPath.salesOps(productId, countryCode))}
     >
       판매 관리로 이동
     </Button>
+  ) : storesLoading ? (
+    <Button variant="primary" loading icon={<CtaChevron />}>
+      오토 업로드
+    </Button>
+  ) : !store ? (
+    <Button variant="secondary" onClick={() => navigate(`${PATH.SETTINGS}?tab=marketplace`)}>
+      스토어 연동하기
+    </Button>
   ) : (
-    <Button variant="primary" loading={uploading} onClick={uploadToShopee}>
+    /* QA-7: 헤더 CTA는 텍스트 우측 chevron (Figma 헤더 CTA 공통) */
+    <Button variant="primary" loading={uploading} icon={<CtaChevron />} onClick={uploadToShopee}>
       오토 업로드
     </Button>
   );
@@ -103,6 +115,8 @@ const DetailPage = () => {
           seller={detail.seller}
           initialImages={detail.productImages}
           initialDetailImages={detail.detailImages}
+          store={store}
+          storeLoading={storesLoading}
         />
       )}
 
@@ -140,6 +154,9 @@ interface DetailBodyProps {
   seller: PdpSeller;
   initialImages: ProductImageItem[];
   initialDetailImages: DetailImageItem[];
+  /** 이 국가의 연동 스토어 — 로딩 중에는 undefined와 구분하기 위해 storeLoading을 함께 본다 */
+  store: ConnectedStore | undefined;
+  storeLoading: boolean;
 }
 
 /** 목 기본 목록 + 스토어 변경분(업로드·AI 생성·재생성·삭제)을 합쳐 노출 목록을 만든다 */
@@ -161,6 +178,8 @@ const DetailBody = ({
   seller,
   initialImages,
   initialDetailImages,
+  store,
+  storeLoading,
 }: DetailBodyProps) => {
   const navigate = useNavigate();
 
@@ -251,6 +270,46 @@ const DetailBody = ({
           language={language}
         />
 
+        {/*
+          Shopee 연동 정보 (F-07 · QA-6 복원) — 이 국가의 실제 연동 상태를 표시한다.
+          QA-8과 같은 원칙: 연동 정보를 아직 모르는 로딩 동안에는 미연동으로 단정하지 않는다.
+        */}
+        <Card id="section-connect" aria-labelledby="connect-title">
+          <CardTitle id="connect-title">Shopee 연동</CardTitle>
+          {storeLoading ? (
+            <CardDesc>연동 정보를 불러오는 중입니다…</CardDesc>
+          ) : store ? (
+            <>
+              <CardDesc>
+                {countryName} Shopee 스토어와 연동되어 있습니다. 검수한 상세 페이지를 현지 언어로
+                바로 업로드할 수 있습니다.
+              </CardDesc>
+              <StoreRow>
+                <ShopeeBadge aria-hidden>S</ShopeeBadge>
+                <StoreMeta>
+                  <StoreName>
+                    {store.countryName} · {store.storeName}
+                  </StoreName>
+                  <StoreDate>연결일: {store.connectedAt}</StoreDate>
+                </StoreMeta>
+                <StoreState>연동 완료</StoreState>
+              </StoreRow>
+            </>
+          ) : (
+            <>
+              <CardDesc>
+                {countryName} Shopee 스토어가 아직 연동되지 않았습니다. 스토어를 연동하면 검수한
+                상세 페이지를 현지 언어로 바로 업로드할 수 있습니다.
+              </CardDesc>
+              <Button
+                variant="secondary"
+                onClick={() => navigate(`${PATH.SETTINGS}?tab=marketplace`)}
+              >
+                스토어 연동하기
+              </Button>
+            </>
+          )}
+        </Card>
       </PreviewColumn>
 
       <DetailEditPanel
@@ -339,6 +398,57 @@ const LoadingText = styled.p`
   text-align: center;
   ${({ theme }) => theme.typography.body02};
   color: ${({ theme }) => theme.colors.textSecondary};
+`;
+
+/* ─────────── Shopee 연동 카드 (QA-6) — 마켓/설정 연동 카드(Figma 12:15303)와 같은 성공 톤 ─────────── */
+
+const StoreRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.sm};
+  padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
+  border-radius: ${({ theme }) => theme.radius.lg};
+  background: ${({ theme }) => theme.colors.successLight};
+`;
+
+/** Shopee 브랜드 배지 — 브랜드 고유색이라 theme 토큰 대신 Shopee 오렌지 그라데이션 사용 */
+const ShopeeBadge = styled.div`
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: ${({ theme }) => theme.radius.lg};
+  background-image: linear-gradient(135deg, #ff6b35 0%, #ee4d2d 100%);
+  color: ${({ theme }) => theme.colors.textOnPrimary};
+  font-size: 18px;
+  font-weight: 800;
+`;
+
+const StoreMeta = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.spacing.xxs};
+  min-width: 0;
+`;
+
+const StoreName = styled.strong`
+  ${({ theme }) => theme.typography.label02};
+  color: ${({ theme }) => theme.colors.primary};
+`;
+
+const StoreDate = styled.span`
+  ${({ theme }) => theme.typography.caption01};
+  color: ${({ theme }) => theme.colors.textSecondary};
+`;
+
+/** '연동 완료' — 연동 완료 전용 그린 (Figma 12:15677) */
+const StoreState = styled.span`
+  margin-left: auto;
+  flex-shrink: 0;
+  ${({ theme }) => theme.typography.label02};
+  color: ${({ theme }) => theme.colors.successVivid};
 `;
 
 export default DetailPage;

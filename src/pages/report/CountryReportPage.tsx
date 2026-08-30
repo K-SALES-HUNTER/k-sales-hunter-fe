@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import aiSparkleIcon from '@/assets/icons/ai-sparkle.svg';
 import Button from '@/components/common/Button';
+import CtaChevron from '@/components/common/CtaChevron';
 import ProductShell from '@/components/layout/ProductShell';
 import { useCountryReport } from '@/hooks/useReport';
 import { useProduct } from '@/hooks/useProducts';
@@ -106,14 +107,12 @@ const CountryReportPage = () => {
       backTo={buildPath.totalReport(productId)}
       countryCode={country.code}
       recommendedPrompts={['이 국가 관세 알려줘', '가격 낮추면 마진 어떻게 돼?', '경쟁사 대비 강점은?']}
-    >
-      <S.PageTop>
-        <S.PageTitle>{report.name} 분석 결과</S.PageTitle>
-        {/* 헤더 CTA — 다음 단계로 이동 (Figma 12:13779 '판매 정보 입력' → 12:14476 '상세 페이지 생성').
-            판매 정보 입력 전에는 판매 정보 입력으로, 입력 후에는 상세 페이지 생성/확인으로 이어진다 */}
+      headerAction={
+        /* Figma — 상단 네비 바 우측 CTA. 진행 단계에 따라 다음 단계로 이어진다 */
         <Button
           variant="primary"
           loading={generating}
+          icon={<CtaChevron />}
           onClick={() => {
             if (!country.hasSalesInfo) {
               navigate(buildPath.salesInfo(productId, country.code));
@@ -132,6 +131,10 @@ const CountryReportPage = () => {
               ? '상세 페이지 확인'
               : '상세 페이지 생성'}
         </Button>
+      }
+    >
+      <S.PageTop>
+        <S.PageTitle>{report.name} 분석 결과</S.PageTitle>
       </S.PageTop>
 
       <S.SectionTabs role="tablist">
@@ -162,22 +165,7 @@ const CountryReportPage = () => {
                 onClick={() => navigate(buildPath.salesInfo(productId, country.code))}
               >
                 판매 정보 입력
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  aria-hidden
-                  focusable="false"
-                >
-                  <path
-                    d="M9.5 6L15.5 12L9.5 18"
-                    stroke="currentColor"
-                    strokeWidth="2.2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
+                <CtaChevron />
               </S.ConclusionCta>
             </S.ConclusionMain>
             <S.InfoList>

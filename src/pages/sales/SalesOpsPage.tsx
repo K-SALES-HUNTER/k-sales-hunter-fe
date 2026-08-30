@@ -7,7 +7,6 @@ import AreaTrendChart from '@/components/charts/AreaTrendChart';
 import BarChart from '@/components/charts/BarChart';
 import Button from '@/components/common/Button';
 import Modal from '@/components/common/Modal';
-import SalesStatusBadge from '@/components/common/SalesStatusBadge';
 import ProductShell from '@/components/layout/ProductShell';
 import { useProduct } from '@/hooks/useProducts';
 import { useSalesOps } from '@/hooks/useSales';
@@ -24,6 +23,7 @@ import {
   CardDesc,
   CardTitle,
   NoticeBox,
+  SolidButton,
   StatBox,
   StatGrid,
   StatLabel,
@@ -91,9 +91,8 @@ const SalesOpsPage = () => {
       headerAction={
         /* Figma 12:14726 · 12:15876 — 판매 중단/재개 버튼은 헤더 우측 */
         stopped ? (
-          <Button variant="primary" onClick={() => setStatus(key, '판매중')}>
-            판매 재개
-          </Button>
+          /* Figma 12:15876 — 판매 재개는 그라데이션이 아닌 단색 네이비 채움 */
+          <SolidButton onClick={() => setStatus(key, '판매중')}>판매 재개</SolidButton>
         ) : (
           /* 판매 중단은 되돌릴 수 없는 동작 — 실행 전 모달 확인 필수 (OPS-01-01 #5) */
           <Button variant="secondary" onClick={() => setStopModalOpen(true)}>
@@ -167,11 +166,10 @@ const SalesOpsPage = () => {
                 <dt>최종 수정일</dt>
                 <dd>{ops.link.updatedAt}</dd>
               </MetaItem>
+              {/* Figma 12:14726 — 판매 상태도 다른 타일과 같은 볼드 텍스트 (뱃지 아님) */}
               <MetaItem>
                 <dt>판매 상태</dt>
-                <dd>
-                  <SalesStatusBadge status={status} />
-                </dd>
+                <dd>{status}</dd>
               </MetaItem>
               <MetaItem>
                 <dt>마지막 업데이트</dt>
@@ -255,11 +253,13 @@ const SalesOpsPage = () => {
                     value: m.revenue,
                   }))}
                   height={140}
-                  formatValue={(v) => `₩${v.toLocaleString()}`}
+                  /* 매출은 구매자 결제 기준 현지 통화 ₫ (QA-11) */
+                  formatValue={(v) => `₫${v.toLocaleString()}`}
                 />
-                {/* 범례는 차트에 그려진 기간의 합계 — 상단 지표(최근 30일)와 기간이 다르다 */}
+                {/* 범례는 차트에 그려진 기간의 합계 — 상단 지표(최근 30일)와 기간이 다르다.
+                    매출은 현지 통화 ₫, 순이익은 셀러 기준 원화 ₩ (Figma 12:14726 통화 규칙) */}
                 <LegendRow>
-                  <LegendItem>매출 ₩{monthlyTotal.revenue.toLocaleString()}</LegendItem>
+                  <LegendItem>매출 ₫{monthlyTotal.revenue.toLocaleString()}</LegendItem>
                   <LegendItem $tone="positive">
                     순이익 ₩{monthlyTotal.profit.toLocaleString()}
                   </LegendItem>
@@ -332,18 +332,17 @@ const SalesOpsPage = () => {
   );
 };
 
+/* Figma 12:14726 — '판매 현황'은 카드 제목과 같은 16px 볼드 (토큰 label01) */
 const PageTitle = styled.h2`
   padding: ${({ theme }) => `0 ${theme.spacing.xs}`};
-  font-size: 18px;
-  font-weight: 700;
-  line-height: 24px;
+  ${({ theme }) => theme.typography.label01};
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 /** 판매 중단 안내 배너 (Figma 597:10041) — 상태 점 + 제목 + 설명 2줄 */
 const StopBanner = styled.div`
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: ${({ theme }) => theme.spacing.sm};
   padding: ${({ theme }) => `${theme.spacing.md} 20px`};
   border-radius: ${({ theme }) => theme.radius.md};
@@ -351,10 +350,12 @@ const StopBanner = styled.div`
   background: ${({ theme }) => theme.colors.errorLight};
 `;
 
+/* Figma 12:15876 — 상태 점은 제목 줄 높이에 맞춰 상단 정렬 */
 const StopDot = styled.span`
   width: 8px;
   height: 8px;
   flex-shrink: 0;
+  margin-top: 6px;
   border-radius: 50%;
   background: ${({ theme }) => theme.colors.error};
 `;
@@ -384,6 +385,7 @@ const SummaryHead = styled.div`
   gap: ${({ theme }) => theme.spacing.xs};
 `;
 
+/* Figma 12:14726 — 스파클 아이콘 배지는 원형이 아닌 라운드 사각 타일 */
 const SparkleBadge = styled.span`
   display: flex;
   align-items: center;
@@ -391,7 +393,7 @@ const SparkleBadge = styled.span`
   width: 32px;
   height: 32px;
   flex-shrink: 0;
-  border-radius: 50%;
+  border-radius: ${({ theme }) => theme.radius.lg};
   background: ${({ theme }) => theme.colors.bgLight};
 
   img {
@@ -400,10 +402,11 @@ const SparkleBadge = styled.span`
   }
 `;
 
+/* Figma 12:14726 — 요약 헤드라인은 브랜드 네이비 볼드 */
 const Headline = styled.p`
   margin-top: ${({ theme }) => theme.spacing.xxs};
   ${({ theme }) => theme.typography.heading03};
-  color: ${({ theme }) => theme.colors.textStrong};
+  color: ${({ theme }) => theme.colors.primary};
 `;
 
 const ChartLabel = styled.span`
@@ -471,19 +474,18 @@ const LegendItem = styled.span<{ $tone?: 'positive' }>`
     $tone === 'positive' ? theme.colors.success : theme.colors.textSecondary};
 `;
 
+/* Figma 12:14726 — 금액 열은 우측 정렬이 아니라 표 중앙(50%)에서 시작하는 좌측 정렬 */
 const CostTable = styled.table`
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
 
   td {
+    width: 50%;
     padding: ${({ theme }) => `10px ${theme.spacing.sm}`};
     border-bottom: 1px solid ${({ theme }) => theme.colors.border};
     ${({ theme }) => theme.typography.tableCell};
     color: ${({ theme }) => theme.colors.textPrimary};
-  }
-
-  td:last-of-type {
-    text-align: right;
   }
 `;
 
@@ -523,13 +525,18 @@ const LinkRow = styled.div`
   gap: ${({ theme }) => theme.spacing.xs};
 `;
 
+/* Figma 12:14726 — URL은 파란 링크가 아닌 회색 본문 텍스트 (밑줄 없음) */
 const LinkUrl = styled.a`
   ${({ theme }) => theme.typography.body02};
-  color: ${({ theme }) => theme.colors.primary};
-  text-decoration: underline;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  text-decoration: none;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+
+  &:hover {
+    text-decoration: underline;
+  }
 `;
 
 const CopyButton = styled.button`
@@ -558,10 +565,14 @@ const MetaGrid = styled.dl`
   margin: 0;
 `;
 
+/* Figma 12:14726 — 등록일·판매 상태 등 메타 4종은 연회색 타일 + 볼드 값 */
 const MetaItem = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: ${({ theme }) => theme.spacing.xxs};
+  padding: ${({ theme }) => `${theme.spacing.xs} ${theme.spacing.sm}`};
+  border-radius: ${({ theme }) => theme.radius.md};
+  background: ${({ theme }) => theme.colors.bgLight};
 
   dt {
     ${({ theme }) => theme.typography.caption01};
@@ -570,7 +581,7 @@ const MetaItem = styled.div`
 
   dd {
     margin: 0;
-    ${({ theme }) => theme.typography.body02};
+    ${({ theme }) => theme.typography.label02};
     color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;

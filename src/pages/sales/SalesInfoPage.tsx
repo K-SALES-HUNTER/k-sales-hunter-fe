@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import styled from '@emotion/styled';
 import { useNavigate, useParams } from 'react-router-dom';
 import Button from '@/components/common/Button';
+import CtaChevron from '@/components/common/CtaChevron';
 import ProductShell from '@/components/layout/ProductShell';
 import { useProduct } from '@/hooks/useProducts';
 import { useSalesInfo } from '@/hooks/useSales';
@@ -40,6 +41,9 @@ const SalesInfoPage = () => {
   // 배송 방식 — AI 추천 기본 선택. 변경 시 판매가 섹션 수익 지표 재계산
   const [shippingMethod, setShippingMethod] = useState<ShippingMethodId>(AI_RECOMMENDED_METHOD);
 
+  // 옵션·재고 섹션의 재고 저장 여부 — 재고까지 저장해야 '상세 페이지 생성' CTA가 활성화된다
+  const [stockSaved, setStockSaved] = useState(false);
+
   /**
    * [DEMO-ONLY] 재고 또는 포장 정보를 저장하면 판매 정보가 확정된 것으로 보고, 상세 페이지 생성을 연다.
    * 백엔드 연동 시: 저장 API 성공 응답으로 상품 상태가 갱신되므로 이 콜백과 onSaved prop을 삭제한다.
@@ -77,10 +81,12 @@ const SalesInfoPage = () => {
       countryCode={countryCode}
       recommendedPrompts={RECOMMENDED_PROMPTS}
       headerAction={
-        /* Figma 12:14476 헤더 우측 — 다음 단계(상세 페이지 생성) CTA */
+        /* Figma 12:14476 헤더 우측 — 다음 단계(상세 페이지 생성) CTA. 재고 저장 전(또는 재고 0)에는 비활성 */
         <Button
           variant="primary"
+          icon={<CtaChevron />}
           loading={generating}
+          disabled={!country?.hasDetailPage && !stockSaved}
           onClick={() => {
             if (country?.hasDetailPage) {
               navigate(buildPath.detailPage(productId, countryCode));
@@ -110,7 +116,7 @@ const SalesInfoPage = () => {
         />
       )}
 
-      <OptionStockSection onSaved={handleSaved} />
+      <OptionStockSection onSaved={handleSaved} onStockSaved={setStockSaved} />
 
       <ShippingSection
         methods={methods}
