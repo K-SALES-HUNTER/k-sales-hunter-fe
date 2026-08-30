@@ -62,6 +62,7 @@ const ProductForm = ({ form }: ProductFormProps) => {
         placeholder="선택"
         options={categoryOptions ?? []}
         loading={categoriesLoading || isAiTargetLoading('category')}
+        aiFilled={isAiFilled('category')}
         value={values.category}
         onChange={(event) => setValue('category', event.target.value)}
       />

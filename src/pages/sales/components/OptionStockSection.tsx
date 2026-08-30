@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import styled from '@emotion/styled';
 import Dropdown from '@/components/common/Dropdown';
 import InputSet from '@/components/common/InputSet';
@@ -24,14 +24,18 @@ interface StockCell {
 /**
  * 옵션·재고 섹션 (SEL-01-01 #10~15) — 카테고리 → 카테고리 속성 → 1단 → 2단 → 재고 매트릭스.
  * 각 단계 저장 시 0.5초 로딩으로 다음 옵션을 Shopee에서 받아오는 흉내를 낸다.
- * 앞 단계를 수정하면 뒤 단계 저장 상태가 초기화된다 (단계 종속적).
+ * 저장할 때마다 그 데이터에 맞는 다음 옵션·속성을 받아오는 구조라서,
+ * 앞 단계를 저장하기 전에는 뒤 단계를 아예 렌더하지 않는다 (disabled 처리 아님).
+ * 앞 단계를 수정하면 뒤 단계 저장 상태가 초기화되고 뒤 단계는 다시 숨겨진다.
  */
 interface OptionStockSectionProps {
   /** [DEMO-ONLY] 재고까지 저장을 마쳤을 때 — 판매 정보 완료 처리 (백엔드 연동 시 제거) */
   onSaved?: () => void;
+  /** 재고 단계 저장 여부 변경 — 상위 화면이 '상세 페이지 생성' CTA 활성화를 결정하는 데 쓴다 */
+  onStockSaved?: (saved: boolean) => void;
 }
 
-const OptionStockSection = ({ onSaved }: OptionStockSectionProps) => {
+const OptionStockSection = ({ onSaved, onStockSaved }: OptionStockSectionProps) => {
   const [category, setCategory] = useState(shopeeCategoryDefaultMock);
   const [attrs, setAttrs] = useState<Record<string, string>>(() =>
     Object.fromEntries(categoryAttrsMock.map((a) => [a.key, a.value])),
@@ -87,6 +91,13 @@ const OptionStockSection = ({ onSaved }: OptionStockSectionProps) => {
     return option1Filled.flatMap((v1) => level2.map((v2) => ({ key: `${v1}|${v2}`, v1, v2 })));
   }, [option1Filled, option2Filled, useOptions]);
 
+  /**
+   * 'AI가채움' 표기 규칙 — 쇼피/AI가 자동으로 넣어준 값 그대로면 그라데이션 텍스트,
+   * 셀러가 손대는 순간 사용자 입력으로 승격되어 일반 텍스트로 돌아간다.
+   * (재고 수량·추가 금액은 애초에 셀러가 채우는 칸이라 대상 아님)
+   */
+  const isAiValue = (current: string, aiValue: string) => current === aiValue;
+
   const getCell = (key: string): StockCell => stockCells[key] ?? { qty: '', extra: '' };
 
   /** 재고(qty)는 stock 단계, 추가 금액(extra)은 extra 단계 저장 상태를 무효화 */
@@ -97,6 +108,15 @@ const OptionStockSection = ({ onSaved }: OptionStockSectionProps) => {
 
   const allStockZero =
     stockRows.length > 0 && stockRows.every((row) => (Number(getCell(row.key).qty) || 0) === 0);
+
+  /**
+   * 재고 저장 상태를 상위로 전달 — 재고까지 저장을 마쳐야(그리고 재고가 0이 아니어야)
+   * '상세 페이지 생성' CTA가 활성화된다. 앞 단계 수정으로 무효화되면 false로 되돌린다.
+   */
+  const stockSavedForCta = saved.stock && !allStockZero;
+  useEffect(() => {
+    onStockSaved?.(stockSavedForCta);
+  }, [stockSavedForCta, onStockSaved]);
 
   return (
     <Card id="section-options" aria-labelledby="options-title">
@@ -115,6 +135,7 @@ const OptionStockSection = ({ onSaved }: OptionStockSectionProps) => {
           required
           options={shopeeCategoryOptionsMock}
           value={category}
+          aiFilled={isAiValue(category, shopeeCategoryDefaultMock)}
           loading={saving === 'category'}
           onChange={(e) => {
             setCategory(e.target.value);
@@ -131,131 +152,143 @@ const OptionStockSection = ({ onSaved }: OptionStockSectionProps) => {
         </SolidButton>
       </StepBlock>
 
-      {/* 2) 카테고리 속성 — 카테고리 저장 후 활성 */}
-      <StepBlock $disabled={!saved.category} aria-disabled={!saved.category}>
-        <SubTitle>카테고리 속성</SubTitle>
-        <FieldGrid>
-          {categoryAttrsMock.map((attr) => (
-            <InputSet
-              key={attr.key}
-              label={attr.label}
-              required={attr.required}
-              aiFilled
-              disabled={!saved.category}
-              value={attrs[attr.key] ?? ''}
-              onChange={(e) => {
-                setAttrs((prev) => ({ ...prev, [attr.key]: e.target.value }));
-                invalidateFrom('attrs');
-              }}
-            />
-          ))}
-        </FieldGrid>
-
-        <RadioField>
-          <RadioLegend>옵션 사용 여부 (추가 색상, 사이즈 등)</RadioLegend>
-          <RadioRow>
-            <RadioLabel>
-              <input
-                type="radio"
-                name="use-options"
-                checked={useOptions}
-                disabled={!saved.category}
-                onChange={() => {
-                  setUseOptions(true);
+      {/* 2) 카테고리 속성 — 카테고리를 저장해야 Shopee에서 받아와 화면에 등장 */}
+      {saved.category && (
+        <StepBlock>
+          <SubTitle>카테고리 속성</SubTitle>
+          <FieldGrid>
+            {categoryAttrsMock.map((attr) => (
+              <InputSet
+                key={attr.key}
+                label={attr.label}
+                required={attr.required}
+                aiFilled={isAiValue(attrs[attr.key] ?? '', attr.value)}
+                value={attrs[attr.key] ?? ''}
+                onChange={(e) => {
+                  setAttrs((prev) => ({ ...prev, [attr.key]: e.target.value }));
                   invalidateFrom('attrs');
                 }}
               />
-              사용
-            </RadioLabel>
-            <RadioLabel>
-              <input
-                type="radio"
-                name="use-options"
-                checked={!useOptions}
-                disabled={!saved.category}
-                onChange={() => {
-                  setUseOptions(false);
-                  invalidateFrom('attrs');
-                }}
-              />
-              미사용
-            </RadioLabel>
-          </RadioRow>
-        </RadioField>
+            ))}
+          </FieldGrid>
 
-        <SolidButton
-          fullWidth
-          loading={saving === 'attrs'}
-          disabled={!saved.category || saved.attrs}
-          onClick={() => saveStep('attrs')}
-        >
-          {saved.attrs ? '저장됨' : '저장'}
-        </SolidButton>
-      </StepBlock>
+          <RadioField>
+            <RadioLegend>옵션 사용 여부 (추가 색상, 사이즈 등)</RadioLegend>
+            <RadioRow>
+              <RadioLabel>
+                <input
+                  type="radio"
+                  name="use-options"
+                  checked={useOptions}
+                  onChange={() => {
+                    setUseOptions(true);
+                    invalidateFrom('attrs');
+                  }}
+                />
+                사용
+              </RadioLabel>
+              <RadioLabel>
+                <input
+                  type="radio"
+                  name="use-options"
+                  checked={!useOptions}
+                  onChange={() => {
+                    setUseOptions(false);
+                    invalidateFrom('attrs');
+                  }}
+                />
+                미사용
+              </RadioLabel>
+            </RadioRow>
+          </RadioField>
 
-      {/* 3) 1단 속성 — 카테고리 속성 저장 후 활성 */}
-      <StepBlock $disabled={!saved.attrs} aria-disabled={!saved.attrs}>
-        <SubTitle>1단 속성</SubTitle>
-        {/* Figma 12:14476 — 옵션명 입력과 옵션값들이 2열 그리드로 흐르고 마지막 셀이 '항목 추가 +' */}
-        <OptionGrid>
-          <InputSet
-            label="옵션명"
-            required
-            aiFilled
-            disabled={!saved.attrs}
-            value={option1Name}
-            onChange={(e) => {
-              setOption1Name(e.target.value);
-              invalidateFrom('option1');
-            }}
-          />
-          {option1Values.map((value, index) => (
+          <SolidButton
+            fullWidth
+            loading={saving === 'attrs'}
+            disabled={saved.attrs}
+            onClick={() => saveStep('attrs')}
+          >
+            {saved.attrs ? '저장됨' : '저장'}
+          </SolidButton>
+        </StepBlock>
+      )}
+
+      {/* 3) 1단 속성 — 카테고리 속성을 저장해야 화면에 등장 */}
+      {saved.attrs && (
+        <StepBlock>
+          <SubTitle>1단 속성</SubTitle>
+          {/* Figma 12:14476 — 옵션명 입력과 옵션값들이 2열 그리드로 흐르고 마지막 셀이 '항목 추가 +' */}
+          <OptionGrid>
             <InputSet
-              key={index}
-              aria-label={`1단 옵션값 ${index + 1}`}
-              disabled={!saved.attrs}
-              value={value}
-              placeholder="1단 속성"
+              label="옵션명"
+              required
+              aiFilled={isAiValue(option1Name, optionLevel1Mock.name)}
+              value={option1Name}
               onChange={(e) => {
-                setOption1Values((prev) =>
-                  prev.map((v, i) => (i === index ? e.target.value : v)),
-                );
+                setOption1Name(e.target.value);
                 invalidateFrom('option1');
               }}
             />
-          ))}
-          <AddItemButton
-            type="button"
-            disabled={!saved.attrs}
-            onClick={() => {
-              setOption1Values((prev) => [...prev, '']);
-              invalidateFrom('option1');
-            }}
+            {option1Values.map((value, index) => (
+              <OptionValueCell key={index}>
+                <InputSet
+                  aria-label={`1단 옵션값 ${index + 1}`}
+                  value={value}
+                  aiFilled={optionLevel1Mock.values.includes(value)}
+                  placeholder="1단 속성"
+                  onChange={(e) => {
+                    setOption1Values((prev) =>
+                      prev.map((v, i) => (i === index ? e.target.value : v)),
+                    );
+                    invalidateFrom('option1');
+                  }}
+                />
+                {/* 마지막 1개는 삭제 불가 — 옵션값이 0개가 되면 안 된다 */}
+                {option1Values.length > 1 && (
+                  <RemoveValueButton
+                    type="button"
+                    aria-label={`1단 옵션값 ${index + 1} 삭제`}
+                    onClick={() => {
+                      setOption1Values((prev) => prev.filter((_, i) => i !== index));
+                      invalidateFrom('option1');
+                    }}
+                  >
+                    ×
+                  </RemoveValueButton>
+                )}
+              </OptionValueCell>
+            ))}
+            <AddItemButton
+              type="button"
+              onClick={() => {
+                setOption1Values((prev) => [...prev, '']);
+                invalidateFrom('option1');
+              }}
+            >
+              항목 추가
+              <span aria-hidden>+</span>
+            </AddItemButton>
+          </OptionGrid>
+          <SolidButton
+            fullWidth
+            loading={saving === 'option1'}
+            disabled={saved.option1 || option1Name.trim() === '' || option1Filled.length === 0}
+            onClick={() => saveStep('option1')}
           >
-            항목 추가
-            <span aria-hidden>+</span>
-          </AddItemButton>
-        </OptionGrid>
-        <SolidButton
-          fullWidth
-          loading={saving === 'option1'}
-          disabled={!saved.attrs || saved.option1 || option1Name.trim() === '' || option1Filled.length === 0}
-          onClick={() => saveStep('option1')}
-        >
-          {saved.option1 ? '저장됨' : '저장'}
-        </SolidButton>
-      </StepBlock>
+            {saved.option1 ? '저장됨' : '저장'}
+          </SolidButton>
+        </StepBlock>
+      )}
 
-      {/* 4) 2단 속성 — 옵션 미사용이면 숨김, 1단 저장 후 활성 */}
-      {useOptions && (
-        <StepBlock $disabled={!saved.option1} aria-disabled={!saved.option1}>
+      {/* 4) 2단 속성 — 옵션 미사용이면 없음, 1단 속성을 저장해야 화면에 등장 */}
+      {useOptions && saved.option1 && (
+        <StepBlock>
           <SubTitle>2단 속성</SubTitle>
           <OptionGrid>
             <InputSet
               label="옵션명"
               required
-              aiFilled
-              disabled={!saved.option1}
+              aiFilled={isAiValue(option2Name, optionLevel2Mock.name)}
               value={option2Name}
               onChange={(e) => {
                 setOption2Name(e.target.value);
@@ -263,23 +296,36 @@ const OptionStockSection = ({ onSaved }: OptionStockSectionProps) => {
               }}
             />
             {option2Values.map((value, index) => (
-              <InputSet
-                key={index}
-                aria-label={`2단 옵션값 ${index + 1}`}
-                disabled={!saved.option1}
-                value={value}
-                placeholder="2단 속성"
-                onChange={(e) => {
-                  setOption2Values((prev) =>
-                    prev.map((v, i) => (i === index ? e.target.value : v)),
-                  );
-                  invalidateFrom('option2');
-                }}
-              />
+              <OptionValueCell key={index}>
+                <InputSet
+                  aria-label={`2단 옵션값 ${index + 1}`}
+                  value={value}
+                  aiFilled={optionLevel2Mock.values.includes(value)}
+                  placeholder="2단 속성"
+                  onChange={(e) => {
+                    setOption2Values((prev) =>
+                      prev.map((v, i) => (i === index ? e.target.value : v)),
+                    );
+                    invalidateFrom('option2');
+                  }}
+                />
+                {/* 마지막 1개는 삭제 불가 — 옵션값이 0개가 되면 안 된다 */}
+                {option2Values.length > 1 && (
+                  <RemoveValueButton
+                    type="button"
+                    aria-label={`2단 옵션값 ${index + 1} 삭제`}
+                    onClick={() => {
+                      setOption2Values((prev) => prev.filter((_, i) => i !== index));
+                      invalidateFrom('option2');
+                    }}
+                  >
+                    ×
+                  </RemoveValueButton>
+                )}
+              </OptionValueCell>
             ))}
             <AddItemButton
               type="button"
-              disabled={!saved.option1}
               onClick={() => {
                 setOption2Values((prev) => [...prev, '']);
                 invalidateFrom('option2');
@@ -292,7 +338,7 @@ const OptionStockSection = ({ onSaved }: OptionStockSectionProps) => {
           <SolidButton
             fullWidth
             loading={saving === 'option2'}
-            disabled={!saved.option1 || saved.option2 || option2Name.trim() === '' || option2Filled.length === 0}
+            disabled={saved.option2 || option2Name.trim() === '' || option2Filled.length === 0}
             onClick={() => saveStep('option2')}
           >
             {saved.option2 ? '저장됨' : '저장'}
@@ -300,69 +346,71 @@ const OptionStockSection = ({ onSaved }: OptionStockSectionProps) => {
         </StepBlock>
       )}
 
-      {/* 5) 재고 수량 — 1단×2단 조합 행 자동 생성 (Figma 12:14476: 추가 금액과 분리된 블록) */}
-      <StepBlock $disabled={!stockReady} aria-disabled={!stockReady}>
-        <SubTitle>재고 수량</SubTitle>
-        <FieldLabel>
-          판매 재고
-          <RequiredMark aria-hidden>*</RequiredMark>
-        </FieldLabel>
-        {stockRows.map((row) => (
-          <MatrixRow key={row.key} $useOptions={useOptions}>
-            <InputSet aria-label="1단 속성" value={row.v1} readOnly disabled />
-            {useOptions && <InputSet aria-label="2단 속성" value={row.v2} readOnly disabled />}
-            <InputSet
-              aria-label={`${row.v1} ${row.v2} 수량`}
-              unit="개"
-              inputMode="numeric"
-              disabled={!stockReady}
-              value={getCell(row.key).qty}
-              placeholder="0"
-              onChange={(e) => setCell(row.key, { qty: e.target.value.replace(/[^0-9]/g, '') })}
-            />
-          </MatrixRow>
-        ))}
-        {stockReady && allStockZero && (
-          <WarningText role="alert">재고가 0이면 판매할 수 없습니다.</WarningText>
-        )}
-        <SolidButton
-          fullWidth
-          loading={saving === 'stock'}
-          disabled={!stockReady || saved.stock || allStockZero}
-          onClick={() => saveStep('stock')}
-        >
-          {saved.stock ? '저장됨' : '저장'}
-        </SolidButton>
-      </StepBlock>
+      {/* 5) 재고 수량 — 마지막 옵션 단계를 저장해야 화면에 등장, 1단×2단 조합 행 자동 생성 */}
+      {stockReady && (
+        <StepBlock>
+          <SubTitle>재고 수량</SubTitle>
+          <FieldLabel>
+            판매 재고
+            <RequiredMark aria-hidden>*</RequiredMark>
+          </FieldLabel>
+          {stockRows.map((row) => (
+            <MatrixRow key={row.key} $useOptions={useOptions}>
+              <InputSet aria-label="1단 속성" value={row.v1} readOnly disabled />
+              {useOptions && <InputSet aria-label="2단 속성" value={row.v2} readOnly disabled />}
+              <InputSet
+                aria-label={`${row.v1} ${row.v2} 수량`}
+                unit="개"
+                inputMode="numeric"
+                value={getCell(row.key).qty}
+                placeholder="0"
+                onChange={(e) => setCell(row.key, { qty: e.target.value.replace(/[^0-9]/g, '') })}
+              />
+            </MatrixRow>
+          ))}
+          {allStockZero && (
+            <WarningText role="alert">재고가 0이면 판매할 수 없습니다.</WarningText>
+          )}
+          <SolidButton
+            fullWidth
+            loading={saving === 'stock'}
+            disabled={saved.stock || allStockZero}
+            onClick={() => saveStep('stock')}
+          >
+            {saved.stock ? '저장됨' : '저장'}
+          </SolidButton>
+        </StepBlock>
+      )}
 
-      {/* 6) 옵션별 추가 금액 (Figma 12:14476 — 별도 블록 + 저장 버튼) */}
-      <StepBlock $disabled={!stockReady} aria-disabled={!stockReady}>
-        <SubTitle>옵션별 추가 금액</SubTitle>
-        <FieldLabel>추가 금액</FieldLabel>
-        {stockRows.map((row) => (
-          <MatrixRow key={row.key} $useOptions={useOptions}>
-            <InputSet aria-label="1단 속성" value={row.v1} readOnly disabled />
-            {useOptions && <InputSet aria-label="2단 속성" value={row.v2} readOnly disabled />}
-            <InputSet
-              aria-label={`${row.v1} ${row.v2} 추가 금액`}
-              unit="원"
-              inputMode="numeric"
-              disabled={!stockReady}
-              value={getCell(row.key).extra}
-              placeholder="0"
-              onChange={(e) => setCell(row.key, { extra: e.target.value.replace(/[^0-9]/g, '') })}
-            />
-          </MatrixRow>
-        ))}
-        <SolidButton
-          fullWidth
-          loading={saving === 'extra'}
-          disabled={!stockReady || saved.extra}
-          onClick={() => saveStep('extra')}
-        >
-          {saved.extra ? '저장됨' : '저장'}
-        </SolidButton>
-      </StepBlock>
+      {/* 6) 옵션별 추가 금액 (Figma 12:14476 — 별도 블록 + 저장 버튼, 재고 수량과 함께 등장) */}
+      {stockReady && (
+        <StepBlock>
+          <SubTitle>옵션별 추가 금액</SubTitle>
+          <FieldLabel>추가 금액</FieldLabel>
+          {stockRows.map((row) => (
+            <MatrixRow key={row.key} $useOptions={useOptions}>
+              <InputSet aria-label="1단 속성" value={row.v1} readOnly disabled />
+              {useOptions && <InputSet aria-label="2단 속성" value={row.v2} readOnly disabled />}
+              <InputSet
+                aria-label={`${row.v1} ${row.v2} 추가 금액`}
+                unit="원"
+                inputMode="numeric"
+                value={getCell(row.key).extra}
+                placeholder="0"
+                onChange={(e) => setCell(row.key, { extra: e.target.value.replace(/[^0-9]/g, '') })}
+              />
+            </MatrixRow>
+          ))}
+          <SolidButton
+            fullWidth
+            loading={saving === 'extra'}
+            disabled={saved.extra}
+            onClick={() => saveStep('extra')}
+          >
+            {saved.extra ? '저장됨' : '저장'}
+          </SolidButton>
+        </StepBlock>
+      )}
     </Card>
   );
 };
@@ -417,10 +465,42 @@ const AddItemButton = styled.button`
   background: ${({ theme }) => theme.colors.primaryLight};
   ${({ theme }) => theme.typography.label02};
   color: ${({ theme }) => theme.colors.textPrimary};
+`;
 
-  &:disabled {
-    color: ${({ theme }) => theme.colors.textSecondary};
-    cursor: default;
+/** 옵션값 입력 셀 — 호버(또는 포커스) 시 삭제(X) 버튼이 칸 위에 뜬다 (QA: 옵션값 삭제) */
+const OptionValueCell = styled.div`
+  position: relative;
+
+  /* 셀 안의 버튼은 삭제 버튼뿐 — 호버·키보드 포커스 시에만 노출 */
+  &:hover button,
+  &:focus-within button {
+    opacity: 1;
+    pointer-events: auto;
+  }
+`;
+
+/** 옵션값 삭제 버튼 — 입력칸 우측에 겹쳐 뜨는 원형 X */
+const RemoveValueButton = styled.button`
+  position: absolute;
+  top: 50%;
+  right: ${({ theme }) => theme.spacing.xs};
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: ${({ theme }) => theme.colors.bgGray};
+  ${({ theme }) => theme.typography.captionStrong};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease-out, background 120ms ease-out, color 120ms ease-out;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.errorLight};
+    color: ${({ theme }) => theme.colors.error};
   }
 `;
 
