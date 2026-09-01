@@ -18,10 +18,15 @@ const RECOMMENDED_PROMPTS = [
   '추천 가격 근거 알려줘',
   '옵션 구성 추천해줘',
   '재고는 얼마나 준비할까?',
+  /* 배송 방식 선택 직전에 누르는 질문 (시연 10단계) */
+  '배송 방식 뭐가 나아?',
 ];
 
 const AI_RECOMMENDED_METHOD: ShippingMethodId =
   shippingMethodsMock.find((m) => m.aiRecommended)?.id ?? 'direct';
+
+/** 상세 페이지 생성 CTA가 잠겨 있는 이유 — 버튼 툴팁과 제목 옆 힌트에 같은 문구를 쓴다 */
+const CTA_LOCK_HINT = '옵션·재고의 재고 수량까지 저장하면 상세 페이지를 생성할 수 있어요.';
 
 /**
  * SEL-01-01 판매 정보 입력 (Figma 256:4102) —
@@ -73,6 +78,13 @@ const SalesInfoPage = () => {
   const methods = salesInfo?.shippingMethods ?? shippingMethodsMock;
   const shippingCostKrw = methods.find((m) => m.id === shippingMethod)?.costKrw ?? 0;
 
+  /**
+   * 상세 페이지 생성은 재고까지 저장해야 열린다 (순차 저장 폼).
+   * 이유를 화면에 적어 두지 않으면 '다 저장했는데 왜 안 눌리지?'가 되므로
+   * 버튼 툴팁과 제목 옆 힌트로 남은 조건을 그대로 알려 준다.
+   */
+  const ctaLocked = !country?.hasDetailPage && !stockSaved;
+
   return (
     <ProductShell
       product={product}
@@ -86,7 +98,8 @@ const SalesInfoPage = () => {
           variant="primary"
           icon={<CtaChevron />}
           loading={generating}
-          disabled={!country?.hasDetailPage && !stockSaved}
+          disabled={ctaLocked}
+          title={ctaLocked ? CTA_LOCK_HINT : undefined}
           onClick={() => {
             if (country?.hasDetailPage) {
               navigate(buildPath.detailPage(productId, countryCode));
@@ -99,7 +112,10 @@ const SalesInfoPage = () => {
         </Button>
       }
     >
-      <PageTitle>판매 정보 입력</PageTitle>
+      <TitleRow>
+        <PageTitle>판매 정보 입력</PageTitle>
+        {ctaLocked && <CtaHint>{CTA_LOCK_HINT}</CtaHint>}
+      </TitleRow>
       <SectionTabs
         tabs={[
           { label: '판매가', targetId: 'section-price' },
@@ -128,9 +144,27 @@ const SalesInfoPage = () => {
   );
 };
 
-/** 페이지 섹션 타이틀 (Figma 298:6352) — Title/02 18px */
-const PageTitle = styled.h2`
+/**
+ * 제목 줄 (Figma 298:6352) — 판매 관리와 같은 규칙으로,
+ * 바로 아래 섹션 탭과 붙여 하나의 묶음으로 보이게 한다.
+ */
+const TitleRow = styled.div`
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: ${({ theme }) => theme.spacing.xs};
+  margin-bottom: -12px;
   padding: ${({ theme }) => `0 ${theme.spacing.xs}`};
+`;
+
+/** 상단 CTA가 왜 잠겨 있는지 알려 주는 한 줄 (재고 저장 전까지만 노출) */
+const CtaHint = styled.span`
+  ${({ theme }) => theme.typography.caption01};
+  color: ${({ theme }) => theme.colors.textSecondary};
+`;
+
+/** 페이지 섹션 타이틀 — Title/02 18px */
+const PageTitle = styled.h2`
   font-size: 18px;
   font-weight: 700;
   line-height: 24px;

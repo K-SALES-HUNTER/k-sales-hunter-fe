@@ -107,7 +107,7 @@ export const SalesAsOf = styled.p`
 
 export const SalesStatGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: ${({ theme }) => theme.spacing.sm};
 
   ${({ theme }) => theme.media.mobile} {
@@ -240,7 +240,7 @@ export const SkeletonLine = styled.div<{ $width?: string; $height?: number }>`
 
 export const SkeletonCard = styled.div`
   height: 193px;
-  border-radius: ${({ theme }) => theme.spacing.md};
+  border-radius: ${({ theme }) => theme.radius.xl};
   border: 1px solid ${({ theme }) => theme.colors.border};
   background: ${({ theme }) => theme.colors.bgLight};
 `;
@@ -256,6 +256,8 @@ export const ErrorBox = styled.p`
 /* ── 국가별 분석 결과 ───────────────────────────── */
 
 export const SectionTitle = styled.h2`
+  /* Figma 576:6776 — 제목과 카드 그리드는 한 묶음이라 16px만 띄운다 (콘텐츠 기본 간격 24 - 8) */
+  margin-bottom: -${({ theme }) => theme.spacing.xs};
   padding: ${({ theme }) => `0 ${theme.spacing.xs}`};
   ${({ theme }) => theme.typography.label01};
   color: ${({ theme }) => theme.colors.textPrimary};
@@ -263,7 +265,7 @@ export const SectionTitle = styled.h2`
 
 export const CountryGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: ${({ theme }) => theme.spacing.md};
 
   ${({ theme }) => theme.media.tablet} {
@@ -281,7 +283,8 @@ export const Paragraph = styled.p`
 export const ChipGroups = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: ${({ theme }) => theme.spacing.xl};
+  /* Figma 576:6776 — 조사 국가 · 분석 기준 · 기준 플랫폼 세 묶음은 넉넉히 벌어져 있다 */
+  gap: ${({ theme }) => theme.spacing.xxxl};
 `;
 
 export const ChipGroup = styled.div`

@@ -4,9 +4,19 @@ import Button from '@/components/common/Button';
 /**
  * 폼 저장류 CTA (Figma 12:14476 · 12:14726 · 12:16361) —
  * 헤더 CTA(그라데이션)와 달리 본문 저장/추가 버튼은 단색 네이비 채움이다.
+ *
+ * $done: 저장을 마친 단계. 공통 disabled 처리(흰 오버레이)만 쓰면
+ * '저장됨'과 '아직 못 누르는 저장'이 똑같이 흐린 네이비로 보여 구분되지 않으므로,
+ * 완료 상태는 성공 톤(연초록 + 초록 글씨)으로 따로 그린다.
  */
-export const SolidButton = styled(Button)`
-  background: ${({ theme }) => theme.colors.primary};
+export const SolidButton = styled(Button)<{ $done?: boolean }>`
+  background: ${({ theme, $done }) =>
+    $done ? theme.colors.successLight : theme.colors.primary};
+  ${({ theme, $done }) => $done && `color: ${theme.colors.success};`}
+
+  &:disabled::after {
+    background: ${({ $done }) => ($done ? 'transparent' : 'rgba(255, 255, 255, 0.6)')};
+  }
 `;
 
 /** 판매 준비·운영 페이지 공용 카드 (Figma Card) */
@@ -33,6 +43,16 @@ export const CardDesc = styled.p`
 export const SubTitle = styled.h3`
   ${({ theme }) => theme.typography.label02};
   color: ${({ theme }) => theme.colors.textPrimary};
+`;
+
+/**
+ * 소제목 + 표·차트 한 덩어리 (Figma 12:14726 — 소제목과 내용 사이 10px).
+ * 카드 gap(16)이 적용되지 않는 중첩 블록에서 소제목이 내용에 붙어 보이지 않게 한다.
+ */
+export const Block = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 `;
 
 /**
@@ -87,12 +107,17 @@ export const TableScroll = styled.div`
   overflow-x: auto;
 `;
 
-export const Table = styled.table`
+/**
+ * 표 (Figma 12:14726) — 헤더만 연회색 배경이고 본문 행에는 구분선이 없다. 행 높이 40px.
+ * $fixed는 열을 같은 폭으로 나누는 표(가격별 예상 영향·가격 변경 기록)에 쓴다.
+ */
+export const Table = styled.table<{ $fixed?: boolean }>`
   width: 100%;
   border-collapse: collapse;
+  table-layout: ${({ $fixed }) => ($fixed ? 'fixed' : 'auto')};
 
   th {
-    padding: ${({ theme }) => `${theme.spacing.xs} ${theme.spacing.sm}`};
+    padding: ${({ theme }) => `10px ${theme.spacing.sm}`};
     text-align: left;
     white-space: nowrap;
     ${({ theme }) => theme.typography.tableHeader};
@@ -101,11 +126,10 @@ export const Table = styled.table`
   }
 
   td {
-    padding: ${({ theme }) => `${theme.spacing.xs} ${theme.spacing.sm}`};
+    padding: ${({ theme }) => `10px ${theme.spacing.sm}`};
     white-space: nowrap;
     ${({ theme }) => theme.typography.tableCell};
     color: ${({ theme }) => theme.colors.textPrimary};
-    border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   }
 `;
 

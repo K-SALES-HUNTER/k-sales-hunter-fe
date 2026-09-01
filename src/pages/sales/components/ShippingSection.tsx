@@ -47,11 +47,12 @@ const ShippingSection = ({
     setPackaging((prev) => ({ ...prev, [key]: raw.replace(/[^0-9.]/g, '') }));
 
   /**
-   * 포장 치수(가로·세로·높이)는 AI가 상품 정보로 추정해 미리 채워 둔 값이라 그라데이션 텍스트.
-   * 무게는 셀러가 상품 등록에서 직접 입력한 값이므로 대상이 아니다.
+   * 상품 포장 정보 4칸은 모두 화면에 자동으로 채워진 값이다 —
+   * 치수는 AI가 상품 정보로 추정하고, 무게는 등록 정보에서 그대로 끌어온다.
+   * QA 규칙(직접 입력이 아닌 자동 표기 값은 전부 그라데이션)에 따라 네 칸 모두 대상이며,
+   * 셀러가 한 글자라도 고치면 그 칸만 일반 텍스트로 승격된다.
    */
-  const isAiPack = (key: 'width' | 'depth' | 'height') =>
-    packaging[key] === String(packagingMock[key]);
+  const isAiPack = (key: keyof typeof packaging) => packaging[key] === String(packagingMock[key]);
 
   const savePackaging = () => {
     setSaving(true);
@@ -80,12 +81,12 @@ const ShippingSection = ({
               disabled={disabled}
               onClick={() => onChange(method.id)}
             >
-              <MethodName>{method.name}</MethodName>
-              <MethodMeta>
+              <MethodName $selected={selected}>{method.name}</MethodName>
+              <MethodMeta $selected={selected}>
                 <dt>예상 비용</dt>
                 <dd>{method.cost}</dd>
               </MethodMeta>
-              <MethodMeta>
+              <MethodMeta $selected={selected}>
                 <dt>기간</dt>
                 <dd>{method.period}</dd>
               </MethodMeta>
@@ -107,6 +108,7 @@ const ShippingSection = ({
             label="무게"
             unit="(g)"
             inputMode="numeric"
+            aiFilled={isAiPack('weight')}
             disabled={disabled}
             value={packaging.weight}
             onChange={(e) => setPack('weight', e.target.value)}
@@ -178,12 +180,14 @@ const MethodCard = styled.button<{ $selected: boolean }>`
   }
 `;
 
-const MethodName = styled.strong`
+/* Figma 12:14476 · 12:14726 — 선택하지 않은 방식은 제목·값까지 회색으로 물러난다 */
+const MethodName = styled.strong<{ $selected: boolean }>`
   ${({ theme }) => theme.typography.label01};
-  color: ${({ theme }) => theme.colors.textStrong};
+  color: ${({ theme, $selected }) =>
+    $selected ? theme.colors.textStrong : theme.colors.textSecondary};
 `;
 
-const MethodMeta = styled.dl`
+const MethodMeta = styled.dl<{ $selected: boolean }>`
   display: flex;
   gap: ${({ theme }) => theme.spacing.xs};
   ${({ theme }) => theme.typography.body02};
@@ -193,7 +197,8 @@ const MethodMeta = styled.dl`
   }
 
   dd {
-    color: ${({ theme }) => theme.colors.textPrimary};
+    color: ${({ theme, $selected }) =>
+      $selected ? theme.colors.textPrimary : theme.colors.textSecondary};
     font-weight: 600;
   }
 `;

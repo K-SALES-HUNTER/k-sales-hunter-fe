@@ -51,7 +51,7 @@ const TotalReportPage = () => {
           </SectionCard>
         ) : (
           <>
-            <SectionCard title="AI 종합 결론" icon={aiSparkleIcon}>
+            <SectionCard title="AI 종합 결론" icon={aiSparkleIcon} bare>
               <S.SkeletonLine $width="60%" $height={34} />
               <S.SkeletonLine $width="100%" />
               <S.SkeletonLine $width="85%" />
@@ -83,10 +83,16 @@ const TotalReportPage = () => {
       product={product}
       title="글로벌 분석 보고서"
       backTo={PATH.PRODUCTS}
-      recommendedPrompts={['필리핀도 분석해줘', '가장 마진 높은 국가?', '현지 경쟁사 가격대 알려줘']}
+      /* 첫 질문은 통관이 막힌 국가 — 제도 근거로 불가를 답하는 시나리오 (시연 9단계) */
+      recommendedPrompts={[
+        '인도네시아도 팔 수 있어?',
+        '필리핀도 분석해줘',
+        '가장 마진 높은 국가?',
+        '현지 경쟁사 가격대 알려줘',
+      ]}
     >
-      {/* ① AI 종합 결론 — 한 줄 결론 + 근거 문단 + 4축 지표 */}
-      <SectionCard title="AI 종합 결론" icon={aiSparkleIcon}>
+      {/* ① AI 종합 결론 — 한 줄 결론 + 근거 문단 + 4축 지표 (Figma: 카드 테두리 없는 블록) */}
+      <SectionCard title="AI 종합 결론" icon={aiSparkleIcon} bare>
         <S.ConclusionBody>
           <S.ConclusionMain>
             <S.ConclusionTitle>{report.conclusionTitle}</S.ConclusionTitle>
@@ -150,28 +156,33 @@ const TotalReportPage = () => {
             <AreaTrendChart data={sales.monthlyTrend} height={72} formatValue={won} />
           </div>
 
-          {/* 판매 중인 국가별 매출 — 순위 뱃지 + 국가·매출 + 국가별 판매 관리 이동 (Figma 576:7199) */}
-          <div>
-            <S.SubTitle>판매 중인 국가별 매출</S.SubTitle>
-            <S.CountryRevenueList>
-              {sellingRevenues.map((revenue, index) => (
-                <S.CountryRevenueRow key={revenue.code}>
-                  <S.RankBadge>{index + 1}위</S.RankBadge>
-                  <S.CountryRevenueMain>
-                    <span>{revenue.name}</span>
-                    <S.RevenueValue>{krw(revenue.revenue)}</S.RevenueValue>
-                  </S.CountryRevenueMain>
-                  <S.RowButton
-                    type="button"
-                    onClick={() => navigate(buildPath.salesOps(productId, revenue.code))}
-                  >
-                    판매 관리
-                    <S.RowButtonIcon src={arrowRightIcon} alt="" />
-                  </S.RowButton>
-                </S.CountryRevenueRow>
-              ))}
-            </S.CountryRevenueList>
-          </div>
+          {/*
+            판매 중인 국가별 매출 — 순위 뱃지 + 국가·매출 + 국가별 판매 관리 이동 (Figma 576:7199).
+            집계할 국가가 없으면 제목만 남아 빈 블록이 되므로 통째로 감춘다.
+          */}
+          {sellingRevenues.length > 0 && (
+            <div>
+              <S.SubTitle>판매 중인 국가별 매출</S.SubTitle>
+              <S.CountryRevenueList>
+                {sellingRevenues.map((revenue, index) => (
+                  <S.CountryRevenueRow key={revenue.code}>
+                    <S.RankBadge>{index + 1}위</S.RankBadge>
+                    <S.CountryRevenueMain>
+                      <span>{revenue.name}</span>
+                      <S.RevenueValue>{krw(revenue.revenue)}</S.RevenueValue>
+                    </S.CountryRevenueMain>
+                    <S.RowButton
+                      type="button"
+                      onClick={() => navigate(buildPath.salesOps(productId, revenue.code))}
+                    >
+                      판매 관리
+                      <S.RowButtonIcon src={arrowRightIcon} alt="" />
+                    </S.RowButton>
+                  </S.CountryRevenueRow>
+                ))}
+              </S.CountryRevenueList>
+            </div>
+          )}
         </SectionCard>
       )}
 

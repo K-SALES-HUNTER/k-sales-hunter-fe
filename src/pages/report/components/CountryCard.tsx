@@ -84,7 +84,7 @@ const Card = styled.article`
   padding: ${({ theme }) => theme.spacing.md};
   background: ${({ theme }) => theme.colors.surface};
   border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.spacing.md};
+  border-radius: ${({ theme }) => theme.radius.xl};
 `;
 
 const NameRow = styled.div`

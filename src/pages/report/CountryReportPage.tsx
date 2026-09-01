@@ -154,7 +154,7 @@ const CountryReportPage = () => {
 
       {/* ① AI 종합 결론 — 추천 포지셔닝 + 권장 판매가 + 예상 순이익 */}
       <div id="section-conclusion">
-        <SectionCard title="AI 종합 결론" icon={aiSparkleIcon}>
+        <SectionCard title="AI 종합 결론" icon={aiSparkleIcon} bare>
           <S.ConclusionBody>
             <S.ConclusionMain>
               <S.ConclusionTitle>{report.conclusion.title}</S.ConclusionTitle>

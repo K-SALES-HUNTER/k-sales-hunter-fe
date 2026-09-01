@@ -91,11 +91,11 @@ const SummaryBox = styled.p`
 
 const StatGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: ${({ theme }) => theme.spacing.sm};
 
   ${({ theme }) => theme.media.tablet} {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 `;
 
@@ -200,8 +200,9 @@ const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
 
+  /* Figma 12:13779 — 헤더만 연회색 배경, 본문 행에는 구분선이 없다 (행 높이 40px) */
   th {
-    padding: ${({ theme }) => `${theme.spacing.xs} ${theme.spacing.sm}`};
+    padding: ${({ theme }) => `10px ${theme.spacing.sm}`};
     text-align: left;
     background: ${({ theme }) => theme.colors.bgLight};
     ${({ theme }) => theme.typography.tableHeader};
@@ -210,8 +211,7 @@ const Table = styled.table`
   }
 
   td {
-    padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.sm}`};
-    border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+    padding: ${({ theme }) => `10px ${theme.spacing.sm}`};
     ${({ theme }) => theme.typography.tableCell};
     color: ${({ theme }) => theme.colors.textPrimary};
   }
