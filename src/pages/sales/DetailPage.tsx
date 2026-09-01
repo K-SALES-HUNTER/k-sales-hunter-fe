@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { keyframes } from '@emotion/react';
 import styled from '@emotion/styled';
 import { useNavigate, useParams } from 'react-router-dom';
 import Button from '@/components/common/Button';
@@ -10,6 +11,10 @@ import { useDetailContent } from '@/hooks/useSales';
 import { useConnectedStores } from '@/hooks/useSettings';
 import type { DetailImageTarget } from '@/mocks/detailImage';
 import {
+  buildRegeneratedDescriptionKo,
+  buildRegeneratedUspsKo,
+  detailImagesRegeneratedMock,
+  regeneratedLocalContentMock,
   type DetailImageItem,
   type PdpContent,
   type PdpSeller,
@@ -115,6 +120,8 @@ const DetailPage = () => {
           seller={detail.seller}
           initialImages={detail.productImages}
           initialDetailImages={detail.detailImages}
+          sellingPoints={product.sellingPoints}
+          mainTarget={product.mainTarget}
           store={store}
           storeLoading={storesLoading}
         />
@@ -154,10 +161,16 @@ interface DetailBodyProps {
   seller: PdpSeller;
   initialImages: ProductImageItem[];
   initialDetailImages: DetailImageItem[];
+  /** 상품 등록에서 확정한 셀링 포인트·메인 타겟 — 편집 패널에서 직접 고칠 수 있다 */
+  sellingPoints: string;
+  mainTarget: string;
   /** 이 국가의 연동 스토어 — 로딩 중에는 undefined와 구분하기 위해 storeLoading을 함께 본다 */
   store: ConnectedStore | undefined;
   storeLoading: boolean;
 }
+
+/** [DEMO-ONLY] 셀링 포인트·메인 타겟 수정 → 상세 설명·상세 이미지 재생성 목 소요 시간 */
+const REGENERATE_DELAY_MS = 1800;
 
 /** 목 기본 목록 + 스토어 변경분(업로드·AI 생성·재생성·삭제)을 합쳐 노출 목록을 만든다 */
 const useResolvedImages = (base: DetailImageEntry[], key: string) => {
@@ -178,6 +191,8 @@ const DetailBody = ({
   seller,
   initialImages,
   initialDetailImages,
+  sellingPoints,
+  mainTarget,
   store,
   storeLoading,
 }: DetailBodyProps) => {
@@ -187,6 +202,7 @@ const DetailBody = ({
   const detailImageStoreKey = detailImageKey(productId, countryCode, 'detail');
   const addImage = useDetailImageStore((state) => state.addImage);
   const removeImage = useDetailImageStore((state) => state.removeImage);
+  const replaceImage = useDetailImageStore((state) => state.replaceImage);
 
   const images = useResolvedImages(initialImages, productImageKey);
   const detailImages = useResolvedImages(initialDetailImages, detailImageStoreKey);
@@ -197,6 +213,73 @@ const DetailBody = ({
   // 텍스트 수정 결과 (한국어 검수본에 반영, 저장 시 미리보기 즉시 갱신)
   const [editedName, setEditedName] = useState(content.ko.name);
   const [editedDesc, setEditedDesc] = useState(content.ko.description);
+  const [editedPoints, setEditedPoints] = useState(sellingPoints);
+  const [editedTarget, setEditedTarget] = useState(mainTarget);
+
+  /**
+   * 셀링 포인트·메인 타겟 재생성 상태 (시연 11단계).
+   * regenerated가 채워지면 미리보기의 USP·상세 설명이 재생성 결과로 바뀌고,
+   * aiRevision이 오르면 편집 패널의 상세 설명 입력값도 그 결과로 갈아 끼워진다.
+   */
+  const [regenerating, setRegenerating] = useState(false);
+  const [aiRevision, setAiRevision] = useState(0);
+  const [regenerated, setRegenerated] = useState<{
+    ko: { usps: string[]; description: string };
+    local: { usps: string[]; description: string };
+  } | null>(null);
+
+  const regenerateTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
+  useEffect(() => () => clearTimeout(regenerateTimerRef.current ?? undefined), []);
+
+  /** 상세 이미지도 재생성분으로 교체 — 보이는 순서대로 갈아 끼우고 모자라면 새로 추가한다 */
+  const regenerateDetailImages = (current: DetailImageEntry[]) => {
+    detailImagesRegeneratedMock.forEach((next, index) => {
+      const target = current[index];
+      const label = `상세 이미지 ${index + 1}`;
+      if (target) {
+        replaceImage(detailImageStoreKey, target.id, { ...next, id: target.id, label });
+        return;
+      }
+      addImage(detailImageStoreKey, { ...next, id: `${next.id}-${Date.now()}`, label });
+    });
+  };
+
+  /**
+   * 편집 패널 저장 —
+   * 상품명·상세 설명은 그대로 반영하고, 셀링 포인트나 메인 타겟이 바뀌었으면
+   * 상세 설명·상세 이미지를 그 내용으로 다시 생성한다 (기획 시나리오 11).
+   */
+  const handleSaveText = (draft: {
+    name: string;
+    description: string;
+    sellingPoints: string;
+    mainTarget: string;
+  }) => {
+    setEditedName(draft.name);
+    setEditedDesc(draft.description);
+
+    const sourceChanged = draft.sellingPoints !== editedPoints || draft.mainTarget !== editedTarget;
+    setEditedPoints(draft.sellingPoints);
+    setEditedTarget(draft.mainTarget);
+    if (!sourceChanged) return;
+
+    setRegenerating(true);
+    // TODO(백엔드): 상세 페이지 재생성 API(R-003) 응답으로 교체. 지금은 목 지연 + 목 결과.
+    regenerateTimerRef.current = setTimeout(() => {
+      const koDescription = buildRegeneratedDescriptionKo(draft.sellingPoints, draft.mainTarget);
+      setRegenerated({
+        ko: { usps: buildRegeneratedUspsKo(draft.sellingPoints), description: koDescription },
+        local: {
+          usps: [...regeneratedLocalContentMock.usps],
+          description: regeneratedLocalContentMock.description,
+        },
+      });
+      setEditedDesc(koDescription);
+      regenerateDetailImages(detailImages);
+      setAiRevision((revision) => revision + 1);
+      setRegenerating(false);
+    }, REGENERATE_DELAY_MS);
+  };
 
   // 상품 대표 이미지 — 삭제로 사라졌으면 첫 이미지로 자동 승격
   const [mainImageDraft, setMainImageDraft] = useState(initialImages[0]?.id ?? '');
@@ -206,8 +289,17 @@ const DetailBody = ({
 
   const previewContent: PdpContent =
     language === 'ko'
-      ? { ...content.ko, name: editedName, description: editedDesc }
-      : content.local;
+      ? {
+          ...content.ko,
+          name: editedName,
+          description: editedDesc,
+          usps: regenerated?.ko.usps ?? content.ko.usps,
+        }
+      : {
+          ...content.local,
+          description: regenerated?.local.description ?? content.local.description,
+          usps: regenerated?.local.usps ?? content.local.usps,
+        };
 
   /** 마지막 1장은 삭제 불가 (대표 이미지는 항상 1장 존재) */
   const deleteImage = (id: string) => {
@@ -260,15 +352,31 @@ const DetailBody = ({
           </LangToggle>
         </HeadRow>
 
-        <PdpPreview
-          content={previewContent}
-          seller={seller}
-          images={images}
-          mainImageId={mainImageId}
-          detailImages={detailImages}
-          countryName={countryName}
-          language={language}
-        />
+        {/* 재생성 결과 안내 — 어떤 입력이 무엇을 바꿨는지 화면에서 확인할 수 있게 남긴다 */}
+        {regenerated && !regenerating && (
+          <RegenNotice role="status">
+            수정한 셀링 포인트·메인 타겟을 반영해 상세 설명과 상세 이미지를 다시 생성했습니다.
+          </RegenNotice>
+        )}
+
+        <PreviewBox>
+          <PdpPreview
+            content={previewContent}
+            seller={seller}
+            images={images}
+            mainImageId={mainImageId}
+            detailImages={detailImages}
+            countryName={countryName}
+            language={language}
+          />
+          {/* 재생성 중에는 미리보기를 덮어 이전 문구가 남아 보이지 않게 한다 */}
+          {regenerating && (
+            <RegenOverlay role="alert" aria-busy>
+              <RegenSpinner aria-hidden />
+              <RegenText>수정한 정보로 상세 페이지를 다시 만들고 있어요</RegenText>
+            </RegenOverlay>
+          )}
+        </PreviewBox>
 
         {/*
           Shopee 연동 정보 (F-07 · QA-6 복원) — 이 국가의 실제 연동 상태를 표시한다.
@@ -315,10 +423,11 @@ const DetailBody = ({
       <DetailEditPanel
         name={editedName}
         description={editedDesc}
-        onSaveText={(name, description) => {
-          setEditedName(name);
-          setEditedDesc(description);
-        }}
+        sellingPoints={editedPoints}
+        mainTarget={editedTarget}
+        onSaveText={handleSaveText}
+        aiRevision={aiRevision}
+        regenerating={regenerating}
         images={images}
         mainImageId={mainImageId}
         onSetMainImage={setMainImageDraft}
@@ -332,11 +441,9 @@ const DetailBody = ({
         onGenerateDetailImage={() => goGenerate('detail')}
         onRegenerateDetailImage={(id) => goGenerate('detail', id)}
       />
-
     </Columns>
   );
 };
-
 
 /* 미리보기 + 편집 패널 2단. 사이드바·AI 패널까지 겹치면 폭이 부족해 좁은 화면에서는 세로로 쌓는다 */
 const Columns = styled.div`
@@ -398,6 +505,52 @@ const LoadingText = styled.p`
   text-align: center;
   ${({ theme }) => theme.typography.body02};
   color: ${({ theme }) => theme.colors.textSecondary};
+`;
+
+/* ─────────── 셀링 포인트·메인 타겟 수정 → 상세 재생성 연출 ─────────── */
+
+/** 재생성 오버레이를 미리보기 위에만 덮기 위한 기준 박스 */
+const PreviewBox = styled.div`
+  position: relative;
+`;
+
+const spin = keyframes`
+  to { transform: rotate(360deg); }
+`;
+
+const RegenOverlay = styled.div`
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: ${({ theme }) => theme.spacing.sm};
+  border-radius: ${({ theme }) => theme.radius.xl};
+  background: ${({ theme }) => `color-mix(in srgb, ${theme.colors.surface} 88%, transparent)`};
+`;
+
+const RegenSpinner = styled.span`
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 4px solid ${({ theme }) => theme.colors.bgGray};
+  border-top-color: ${({ theme }) => theme.colors.primary};
+  animation: ${spin} 0.8s linear infinite;
+`;
+
+const RegenText = styled.p`
+  ${({ theme }) => theme.typography.label02};
+  color: ${({ theme }) => theme.colors.primary};
+`;
+
+const RegenNotice = styled.p`
+  padding: ${({ theme }) => `10px ${theme.spacing.md}`};
+  border-radius: ${({ theme }) => theme.radius.md};
+  background: ${({ theme }) => theme.colors.primaryLight};
+  ${({ theme }) => theme.typography.caption01};
+  color: ${({ theme }) => theme.colors.primary};
 `;
 
 /* ─────────── Shopee 연동 카드 (QA-6) — 마켓/설정 연동 카드(Figma 12:15303)와 같은 성공 톤 ─────────── */

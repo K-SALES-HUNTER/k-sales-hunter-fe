@@ -3,7 +3,7 @@ import styled from '@emotion/styled';
 import InputSet from '@/components/common/InputSet';
 import { SALES_STEP_DELAY_MS } from '@/apis/sales';
 import type { PriceHistoryRow, PriceImpactRow } from '@/mocks/sales';
-import { Card, CardTitle, NoticeBox, SolidButton, SubTitle, Table, TableScroll } from './ui';
+import { Block, Card, CardTitle, NoticeBox, SolidButton, SubTitle, Table, TableScroll } from './ui';
 
 interface PriceManageSectionProps {
   currentPrice: number;
@@ -56,6 +56,8 @@ const PriceManageSection = ({
           required
           unit="VND"
           inputMode="numeric"
+          /* 현재 판매가가 그대로 채워져 있는 동안은 자동 표기 값 → 그라데이션 */
+          aiFilled={price === currentPrice}
           disabled={disabled}
           value={price > 0 ? price.toLocaleString() : ''}
           onChange={(e) => setPriceRaw(e.target.value.replace(/[^0-9]/g, ''))}
@@ -67,10 +69,10 @@ const PriceManageSection = ({
         </ApplyButtonBox>
       </PriceRow>
 
-      <div>
+      <Block>
         <SubTitle>가격별 예상 영향</SubTitle>
         <TableScroll>
-          <Table>
+          <Table $fixed>
             <thead>
               <tr>
                 <th scope="col">가격</th>
@@ -92,12 +94,12 @@ const PriceManageSection = ({
             </tbody>
           </Table>
         </TableScroll>
-      </div>
+      </Block>
 
-      <div>
+      <Block>
         <SubTitle>가격 변경 기록</SubTitle>
         <TableScroll>
-          <Table>
+          <Table $fixed>
             <thead>
               <tr>
                 <th scope="col">날짜</th>
@@ -116,7 +118,7 @@ const PriceManageSection = ({
             </tbody>
           </Table>
         </TableScroll>
-      </div>
+      </Block>
     </Card>
   );
 };

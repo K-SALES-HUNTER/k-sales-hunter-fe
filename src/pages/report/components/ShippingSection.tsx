@@ -74,11 +74,11 @@ const ShippingSection = ({ shipping, initialPackaging }: ShippingSectionProps) =
               <OptionName $selected={isSelected}>{option.name}</OptionName>
               <OptionRow>
                 <OptionLabel>예상 비용</OptionLabel>
-                <OptionValue>{option.costText}</OptionValue>
+                <OptionValue $selected={isSelected}>{option.costText}</OptionValue>
               </OptionRow>
               <OptionRow>
                 <OptionLabel>기간</OptionLabel>
-                <OptionValue>{option.periodText}</OptionValue>
+                <OptionValue $selected={isSelected}>{option.periodText}</OptionValue>
               </OptionRow>
               <FitBadge $selected={isSelected}>{option.fitBadge}</FitBadge>
             </OptionCard>
@@ -184,7 +184,7 @@ const Notice = styled.p`
 
 const OptionGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: ${({ theme }) => theme.spacing.md};
 
   ${({ theme }) => theme.media.mobile} {
@@ -209,12 +209,13 @@ const OptionCard = styled.button<{ $selected: boolean }>`
     background 120ms ease-out;
 `;
 
+/* Figma 12:13779 — 선택하지 않은 방식은 제목·값까지 회색으로 물러난다 */
 const OptionName = styled.span<{ $selected: boolean }>`
   font-size: 18px;
   font-weight: 700;
   line-height: 24px;
   color: ${({ theme, $selected }) =>
-    $selected ? theme.colors.primary : theme.colors.textPrimary};
+    $selected ? theme.colors.primary : theme.colors.textSecondary};
 `;
 
 const OptionRow = styled.span`
@@ -227,9 +228,11 @@ const OptionLabel = styled.span`
   color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
-const OptionValue = styled.span`
+const OptionValue = styled.span<{ $selected: boolean }>`
   ${({ theme }) => theme.typography.body02};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-weight: 600;
+  color: ${({ theme, $selected }) =>
+    $selected ? theme.colors.textPrimary : theme.colors.textSecondary};
 `;
 
 const FitBadge = styled.span<{ $selected: boolean }>`
@@ -258,11 +261,11 @@ const Caption = styled.p`
 
 const PackagingGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: ${({ theme }) => theme.spacing.md};
 
   ${({ theme }) => theme.media.mobile} {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 `;
 

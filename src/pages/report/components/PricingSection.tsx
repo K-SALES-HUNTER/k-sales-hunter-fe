@@ -92,7 +92,7 @@ const PricingSection = ({ pricing }: PricingSectionProps) => {
 
 const ScenarioGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: ${({ theme }) => theme.spacing.md};
 
   ${({ theme }) => theme.media.mobile} {
@@ -154,11 +154,11 @@ const SummaryBox = styled.p`
 
 const StatGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: ${({ theme }) => theme.spacing.sm};
 
   ${({ theme }) => theme.media.tablet} {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 `;
 
@@ -201,13 +201,15 @@ const SubTitle = styled.h3`
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
+/* Figma 12:13779 — 판매 관리의 총 비용 차감 구조 표와 같은 형태: 구분선 없이 첫·마지막 행만 강조 */
 const CostTable = styled.table`
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
 
   td {
-    padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
-    border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+    width: 50%;
+    padding: ${({ theme }) => `10px ${theme.spacing.sm}`};
     ${({ theme }) => theme.typography.tableCell};
     color: ${({ theme }) => theme.colors.textPrimary};
   }
@@ -216,12 +218,12 @@ const CostTable = styled.table`
 const CostRow = styled.tr<{ $emphasis: boolean }>`
   ${({ theme, $emphasis }) =>
     $emphasis
-      ? `background: ${theme.colors.bgLight}; td { font-weight: 700; }`
+      ? `background: ${theme.colors.bgLight};
+         td { font-weight: 700; color: ${theme.colors.textStrong}; }`
       : ''}
 `;
 
-const AmountCell = styled.td`
-  text-align: right;
-`;
+/* 금액 열은 우측 정렬이 아니라 표 중앙(50%)에서 시작하는 좌측 정렬 */
+const AmountCell = styled.td``;
 
 export default PricingSection;

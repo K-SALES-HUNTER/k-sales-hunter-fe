@@ -10,7 +10,7 @@ import {
   shopeeCategoryDefaultMock,
   shopeeCategoryOptionsMock,
 } from '@/mocks/sales';
-import { Card, CardDesc, CardTitle, FieldGrid, SolidButton, StepBlock, SubTitle, WarningText } from './ui';
+import { Card, CardDesc, CardTitle, FieldGrid, SolidButton, StepBlock, SubTitle } from './ui';
 
 /** 단계 순서 — 앞 단계를 저장해야 다음 단계가 열린다 (단계 종속 폼) */
 const STEP_ORDER = ['category', 'attrs', 'option1', 'option2', 'stock', 'extra'] as const;
@@ -41,9 +41,8 @@ const OptionStockSection = ({ onSaved, onStockSaved }: OptionStockSectionProps) 
     Object.fromEntries(categoryAttrsMock.map((a) => [a.key, a.value])),
   );
   const [useOptions, setUseOptions] = useState(true);
-  const [option1Name, setOption1Name] = useState(optionLevel1Mock.name);
+  /* 옵션 타입(제공 색상·제공 사이즈)은 카테고리 스키마가 내려주는 값이라 셀러가 고치지 않는다 */
   const [option1Values, setOption1Values] = useState<string[]>(optionLevel1Mock.values);
-  const [option2Name, setOption2Name] = useState(optionLevel2Mock.name);
   const [option2Values, setOption2Values] = useState<string[]>(optionLevel2Mock.values);
   const [stockCells, setStockCells] = useState<Record<string, StockCell>>({});
 
@@ -145,6 +144,7 @@ const OptionStockSection = ({ onSaved, onStockSaved }: OptionStockSectionProps) 
         <SolidButton
           fullWidth
           loading={saving === 'category'}
+          $done={saved.category}
           disabled={category === '' || saved.category}
           onClick={() => saveStep('category')}
         >
@@ -205,6 +205,7 @@ const OptionStockSection = ({ onSaved, onStockSaved }: OptionStockSectionProps) 
           <SolidButton
             fullWidth
             loading={saving === 'attrs'}
+            $done={saved.attrs}
             disabled={saved.attrs}
             onClick={() => saveStep('attrs')}
           >
@@ -217,22 +218,19 @@ const OptionStockSection = ({ onSaved, onStockSaved }: OptionStockSectionProps) 
       {saved.attrs && (
         <StepBlock>
           <SubTitle>1단 속성</SubTitle>
-          {/* Figma 12:14476 — 옵션명 입력과 옵션값들이 2열 그리드로 흐르고 마지막 셀이 '항목 추가 +' */}
+          {/*
+            Figma productregist_detail — 옵션 타입은 카테고리가 정하므로 '옵션명' 입력칸이 아니라
+            '제공 색상 *' 라벨로 뜨고, 그 아래 2열 그리드에 옵션값과 '항목 추가 +'가 흐른다.
+          */}
+          <FieldLabel>
+            {optionLevel1Mock.label}
+            <RequiredMark aria-hidden>*</RequiredMark>
+          </FieldLabel>
           <OptionGrid>
-            <InputSet
-              label="옵션명"
-              required
-              aiFilled={isAiValue(option1Name, optionLevel1Mock.name)}
-              value={option1Name}
-              onChange={(e) => {
-                setOption1Name(e.target.value);
-                invalidateFrom('option1');
-              }}
-            />
             {option1Values.map((value, index) => (
               <OptionValueCell key={index}>
                 <InputSet
-                  aria-label={`1단 옵션값 ${index + 1}`}
+                  aria-label={`${optionLevel1Mock.label} ${index + 1}`}
                   value={value}
                   aiFilled={optionLevel1Mock.values.includes(value)}
                   placeholder="1단 속성"
@@ -247,7 +245,7 @@ const OptionStockSection = ({ onSaved, onStockSaved }: OptionStockSectionProps) 
                 {option1Values.length > 1 && (
                   <RemoveValueButton
                     type="button"
-                    aria-label={`1단 옵션값 ${index + 1} 삭제`}
+                    aria-label={`${optionLevel1Mock.label} ${index + 1} 삭제`}
                     onClick={() => {
                       setOption1Values((prev) => prev.filter((_, i) => i !== index));
                       invalidateFrom('option1');
@@ -272,7 +270,8 @@ const OptionStockSection = ({ onSaved, onStockSaved }: OptionStockSectionProps) 
           <SolidButton
             fullWidth
             loading={saving === 'option1'}
-            disabled={saved.option1 || option1Name.trim() === '' || option1Filled.length === 0}
+            $done={saved.option1}
+            disabled={saved.option1 || option1Filled.length === 0}
             onClick={() => saveStep('option1')}
           >
             {saved.option1 ? '저장됨' : '저장'}
@@ -284,21 +283,15 @@ const OptionStockSection = ({ onSaved, onStockSaved }: OptionStockSectionProps) 
       {useOptions && saved.option1 && (
         <StepBlock>
           <SubTitle>2단 속성</SubTitle>
+          <FieldLabel>
+            {optionLevel2Mock.label}
+            <RequiredMark aria-hidden>*</RequiredMark>
+          </FieldLabel>
           <OptionGrid>
-            <InputSet
-              label="옵션명"
-              required
-              aiFilled={isAiValue(option2Name, optionLevel2Mock.name)}
-              value={option2Name}
-              onChange={(e) => {
-                setOption2Name(e.target.value);
-                invalidateFrom('option2');
-              }}
-            />
             {option2Values.map((value, index) => (
               <OptionValueCell key={index}>
                 <InputSet
-                  aria-label={`2단 옵션값 ${index + 1}`}
+                  aria-label={`${optionLevel2Mock.label} ${index + 1}`}
                   value={value}
                   aiFilled={optionLevel2Mock.values.includes(value)}
                   placeholder="2단 속성"
@@ -313,7 +306,7 @@ const OptionStockSection = ({ onSaved, onStockSaved }: OptionStockSectionProps) 
                 {option2Values.length > 1 && (
                   <RemoveValueButton
                     type="button"
-                    aria-label={`2단 옵션값 ${index + 1} 삭제`}
+                    aria-label={`${optionLevel2Mock.label} ${index + 1} 삭제`}
                     onClick={() => {
                       setOption2Values((prev) => prev.filter((_, i) => i !== index));
                       invalidateFrom('option2');
@@ -338,7 +331,8 @@ const OptionStockSection = ({ onSaved, onStockSaved }: OptionStockSectionProps) 
           <SolidButton
             fullWidth
             loading={saving === 'option2'}
-            disabled={saved.option2 || option2Name.trim() === '' || option2Filled.length === 0}
+            $done={saved.option2}
+            disabled={saved.option2 || option2Filled.length === 0}
             onClick={() => saveStep('option2')}
           >
             {saved.option2 ? '저장됨' : '저장'}
@@ -368,12 +362,17 @@ const OptionStockSection = ({ onSaved, onStockSaved }: OptionStockSectionProps) 
               />
             </MatrixRow>
           ))}
+          {/* 여기서 막히면 상단 '상세 페이지 생성'도 열리지 않으므로 무엇이 필요한지 그대로 적는다 */}
           {allStockZero && (
-            <WarningText role="alert">재고가 0이면 판매할 수 없습니다.</WarningText>
+            <WarningNotice role="alert">
+              판매할 재고 수량을 1개 이상 입력해야 저장할 수 있습니다. 저장해야 다음 단계로
+              넘어갑니다.
+            </WarningNotice>
           )}
           <SolidButton
             fullWidth
             loading={saving === 'stock'}
+            $done={saved.stock}
             disabled={saved.stock || allStockZero}
             onClick={() => saveStep('stock')}
           >
@@ -404,6 +403,7 @@ const OptionStockSection = ({ onSaved, onStockSaved }: OptionStockSectionProps) 
           <SolidButton
             fullWidth
             loading={saving === 'extra'}
+            $done={saved.extra}
             disabled={saved.extra}
             onClick={() => saveStep('extra')}
           >
@@ -414,6 +414,15 @@ const OptionStockSection = ({ onSaved, onStockSaved }: OptionStockSectionProps) 
     </Card>
   );
 };
+
+/** 재고 미입력 안내 — 한 줄 경고 텍스트보다 눈에 띄어야 해서 연한 경고 박스로 둔다 */
+const WarningNotice = styled.p`
+  padding: ${({ theme }) => `${theme.spacing.xs} ${theme.spacing.sm}`};
+  border-radius: ${({ theme }) => theme.radius.md};
+  background: ${({ theme }) => theme.colors.errorLight};
+  ${({ theme }) => theme.typography.caption01};
+  color: ${({ theme }) => theme.colors.error};
+`;
 
 const RadioField = styled.fieldset`
   display: flex;
@@ -496,7 +505,10 @@ const RemoveValueButton = styled.button`
   color: ${({ theme }) => theme.colors.textSecondary};
   opacity: 0;
   pointer-events: none;
-  transition: opacity 120ms ease-out, background 120ms ease-out, color 120ms ease-out;
+  transition:
+    opacity 120ms ease-out,
+    background 120ms ease-out,
+    color 120ms ease-out;
 
   &:hover {
     background: ${({ theme }) => theme.colors.errorLight};

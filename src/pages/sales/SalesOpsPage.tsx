@@ -19,6 +19,7 @@ import SectionTabs from './components/SectionTabs';
 import ShippingSection from './components/ShippingSection';
 import StockManageSection from './components/StockManageSection';
 import {
+  Block,
   Card,
   CardDesc,
   CardTitle,
@@ -35,6 +36,9 @@ const RECOMMENDED_PROMPTS = ['요즘 판매 추세 어때?', '재고 얼마나 �
 
 const AI_RECOMMENDED_METHOD: ShippingMethodId =
   shippingMethodsMock.find((m) => m.aiRecommended)?.id ?? 'direct';
+
+/** 환율 1,000 VND = 54.0원 (mocks/sales.ts marginBasisMock.fxNote와 같은 값) */
+const VND_TO_KRW = 54 / 1000;
 
 /**
  * OPS-01-01 · OPS-01-02 판매 관리 (Figma 256:4513 · 597:9382) —
@@ -251,6 +255,13 @@ const SalesOpsPage = () => {
                   data={ops.performance.monthlyRevenue.map((m) => ({
                     label: m.label,
                     value: m.revenue,
+                    /**
+                     * 진한 아래 구간 = 그 달 매출에서 순이익이 차지하는 몫.
+                     * 매출은 ₫, 순이익은 ₩이라 금액을 그대로 겹칠 수 없으므로,
+                     * 같은 통화 기준 마진율(순이익 ₩ ÷ 매출을 ₩로 환산)로 비율만 그린다.
+                     */
+                    secondaryRatio: m.profit / (m.revenue * VND_TO_KRW),
+                    secondaryTitle: `${m.label} 순이익 · ₩${m.profit.toLocaleString()}`,
                   }))}
                   height={140}
                   /* 매출은 구매자 결제 기준 현지 통화 ₫ (QA-11) */
@@ -268,7 +279,7 @@ const SalesOpsPage = () => {
             </ChartRow>
 
             {/* 총 비용 차감 구조 — 순이익 산출 과정 단계별 공개 */}
-            <div>
+            <Block>
               <SubTitle>총 비용 차감 구조 (판매가 → 순이익)</SubTitle>
               <CostTable>
                 <tbody>
@@ -296,7 +307,7 @@ const SalesOpsPage = () => {
                 계산 기준 보기
               </BasisToggle>
               {basisOpen && <NoticeBox>{ops.performance.calcBasis}</NoticeBox>}
-            </div>
+            </Block>
           </Card>
 
           {/* 가격 관리 */}
@@ -332,8 +343,14 @@ const SalesOpsPage = () => {
   );
 };
 
-/* Figma 12:14726 — '판매 현황'은 카드 제목과 같은 16px 볼드 (토큰 label01) */
+/**
+ * Figma 12:14726 — '판매 현황'은 카드 제목과 같은 16px 볼드 (토큰 label01).
+ * 제목과 바로 아래 섹션 탭은 하나의 묶음이라 Figma에서도 붙어 있다.
+ * 섹션 탭은 페이지 전체에서 sticky여야 해서 함께 감쌀 수 없으므로,
+ * ProductShell 콘텐츠 기본 간격(24px)을 제목 쪽에서 되돌려 12px로 좁힌다.
+ */
 const PageTitle = styled.h2`
+  margin-bottom: -12px;
   padding: ${({ theme }) => `0 ${theme.spacing.xs}`};
   ${({ theme }) => theme.typography.label01};
   color: ${({ theme }) => theme.colors.textPrimary};
@@ -483,7 +500,6 @@ const CostTable = styled.table`
   td {
     width: 50%;
     padding: ${({ theme }) => `10px ${theme.spacing.sm}`};
-    border-bottom: 1px solid ${({ theme }) => theme.colors.border};
     ${({ theme }) => theme.typography.tableCell};
     color: ${({ theme }) => theme.colors.textPrimary};
   }
@@ -500,9 +516,9 @@ const CostRow = styled.tr<{ $emphasis: boolean }>`
 /* Figma 12:14726 — 테두리 없는 셰브런 + 텍스트 토글 */
 const BasisToggle = styled.button`
   display: inline-flex;
+  align-self: flex-start;
   align-items: center;
   gap: ${({ theme }) => theme.spacing.xxs};
-  margin-top: ${({ theme }) => theme.spacing.sm};
   padding: ${({ theme }) => `${theme.spacing.xxs} 0`};
   ${({ theme }) => theme.typography.caption01};
   color: ${({ theme }) => theme.colors.textPrimary};

@@ -7,6 +7,13 @@ export interface BarPoint {
   highlighted?: boolean;
   /** 마커 표시 (가격대 분포의 권장가 위치 등) */
   marker?: string;
+  /**
+   * 막대 아래쪽을 진한 색으로 채울 비율 0~1 (Figma 12:14726 월간 매출/수익 추이).
+   * 전체 막대가 매출, 진한 부분이 그중 순이익이 차지하는 몫이다.
+   */
+  secondaryRatio?: number;
+  /** 진한 부분 호버 설명 */
+  secondaryTitle?: string;
 }
 
 interface BarChartProps {
@@ -29,7 +36,15 @@ const BarChart = ({ data, height = 120, formatValue }: BarChartProps) => {
               $highlighted={Boolean(d.highlighted)}
               style={{ height: `${(d.value / max) * 100}%` }}
               title={`${d.label} · ${formatValue ? formatValue(d.value) : d.value.toLocaleString()}`}
-            />
+            >
+              {/* Figma 12:14726 — 막대 아래쪽 진한 구간 (매출 중 순이익 몫) */}
+              {d.secondaryRatio !== undefined && (
+                <BarFill
+                  style={{ height: `${Math.min(Math.max(d.secondaryRatio, 0), 1) * 100}%` }}
+                  title={d.secondaryTitle}
+                />
+              )}
+            </Bar>
           </BarCol>
         ))}
       </Bars>
@@ -64,12 +79,22 @@ const BarCol = styled.div`
 `;
 
 const Bar = styled.div<{ $highlighted: boolean }>`
+  position: relative;
   width: 100%;
   min-height: 2px;
   border-radius: 4px 4px 0 0;
   background: ${({ theme, $highlighted }) =>
     $highlighted ? theme.colors.primary : theme.colors.primaryLight};
   transition: background 120ms ease-out;
+`;
+
+const BarFill = styled.div`
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 4px 4px 0 0;
+  background: ${({ theme }) => theme.colors.primary};
 `;
 
 const Marker = styled.span`

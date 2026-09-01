@@ -57,6 +57,12 @@ const nextImageId = () => `product-form-image-${(imageIdSeq += 1)}`;
 interface UseProductFormInitial {
   values: ProductFormValues;
   imageUrls: string[];
+  /**
+   * 처음부터 'AI가채움'(그라데이션)으로 표시할 필드.
+   * 수정 화면처럼 이미 저장된 값을 불러올 때, 등록 때 AI가 채운 칸이
+   * 일반 텍스트로 되돌아가 보이지 않도록 초기 상태를 넘긴다.
+   */
+  aiFilled?: readonly ProductFormField[];
 }
 
 /**
@@ -77,7 +83,7 @@ export const useProductForm = (initial?: UseProductFormInitial) => {
     })),
   );
   const [aiFilledFields, setAiFilledFields] = useState<ReadonlySet<ProductFormField>>(
-    new Set(),
+    () => new Set(initial?.aiFilled ?? []),
   );
   const [aiLoading, setAiLoading] = useState(false);
   const [aiFillDone, setAiFillDone] = useState(false);
