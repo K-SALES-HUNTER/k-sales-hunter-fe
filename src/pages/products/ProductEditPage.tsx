@@ -4,7 +4,7 @@ import styled from '@emotion/styled';
 import { useNavigate, useParams } from 'react-router-dom';
 import Button from '@/components/common/Button';
 import Modal from '@/components/common/Modal';
-import { useProductForm, type ProductFormValues } from '@/hooks/useProductForm';
+import { AI_FILL_FIELDS, useProductForm, type ProductFormValues } from '@/hooks/useProductForm';
 import { useProduct } from '@/hooks/useProducts';
 import type { Product } from '@/types/product';
 import FormPageHeader from './components/FormPageHeader';
@@ -79,9 +79,16 @@ const ProductEditPage = () => {
 
 const ProductEditView = ({ product }: { product: Product }) => {
   const navigate = useNavigate();
+  const initialValues = toFormValues(product);
   const form = useProductForm({
-    values: toFormValues(product),
+    values: initialValues,
     imageUrls: product.images,
+    /**
+     * 등록 때 AI가 채운 항목(카테고리·상품 설명·셀링 포인트·메인 타겟)은
+     * 수정 화면에서도 그라데이션으로 떠야 한다 (QA: AI가 채운 값은 화면이 바뀌어도 그라데이션 유지).
+     * 셀러가 이 화면에서 고치면 useProductForm이 그 칸만 일반 텍스트로 승격한다.
+     */
+    aiFilled: AI_FILL_FIELDS.filter((field) => initialValues[field].trim() !== ''),
   });
 
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -90,7 +97,7 @@ const ProductEditView = ({ product }: { product: Product }) => {
 
   /** 저장 시점 값과 원본 비교 — 이전 → 이후 변경 내역 (모달 335:5001) */
   const collectChanges = (): FieldChange[] => {
-    const initial = toFormValues(product);
+    const initial = initialValues;
     const labels: Array<[keyof ProductFormValues, string, (v: string) => string]> = [
       ['name', '상품명', (v) => v],
       ['category', '카테고리', (v) => v],

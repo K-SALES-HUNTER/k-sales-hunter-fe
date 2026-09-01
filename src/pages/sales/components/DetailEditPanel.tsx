@@ -7,11 +7,29 @@ import InputSet from '@/components/common/InputSet';
 import TextareaSet from '@/components/common/TextareaSet';
 import type { DetailImageEntry } from '@/stores/useDetailImageStore';
 
+export interface DetailTextDraft {
+  name: string;
+  description: string;
+  sellingPoints: string;
+  mainTarget: string;
+}
+
 interface DetailEditPanelProps {
   name: string;
   description: string;
+  /** 상품 등록에서 확정한 셀링 포인트 — 여기서 직접 타이핑해 고칠 수 있다 */
+  sellingPoints: string;
+  /** 상품 등록에서 확정한 메인 타겟 — 여기서 직접 타이핑해 고칠 수 있다 */
+  mainTarget: string;
   /** 저장 시 미리보기 즉시 반영 */
-  onSaveText: (name: string, description: string) => void;
+  onSaveText: (draft: DetailTextDraft) => void;
+  /**
+   * AI 재생성 회차. 셀링 포인트·메인 타겟 수정으로 상세 설명이 다시 생성되면 증가하고,
+   * 그때 패널의 상세 설명 입력값을 재생성 결과로 되돌리고 다시 그라데이션으로 표시한다.
+   */
+  aiRevision: number;
+  /** 재생성 진행 중 — 저장 버튼 로딩 */
+  regenerating: boolean;
   images: DetailImageEntry[];
   mainImageId: string;
   onSetMainImage: (id: string) => void;
@@ -40,7 +58,11 @@ const copyText = (value: string) => {
 const DetailEditPanel = ({
   name,
   description,
+  sellingPoints,
+  mainTarget,
   onSaveText,
+  aiRevision,
+  regenerating,
   images,
   mainImageId,
   onSetMainImage,
@@ -56,18 +78,37 @@ const DetailEditPanel = ({
 }: DetailEditPanelProps) => {
   const [nameDraft, setNameDraft] = useState(name);
   const [descDraft, setDescDraft] = useState(description);
+  const [pointsDraft, setPointsDraft] = useState(sellingPoints);
+  const [targetDraft, setTargetDraft] = useState(mainTarget);
   const [activeTab, setActiveTab] = useState<'text' | 'image'>('text');
   /**
-   * 상품명·상세 설명은 AI가 써 준 초안이라 그라데이션 텍스트로 시작하고,
-   * 셀러가 한 글자라도 고치면 사용자 문장으로 승격되어 일반 텍스트가 된다.
+   * 네 칸 모두 AI가 채워 둔 값이라 그라데이션 텍스트로 시작하고,
+   * 셀러가 한 글자라도 고치면 그 칸만 사용자 문장으로 승격되어 일반 텍스트가 된다.
    */
   const [nameIsAi, setNameIsAi] = useState(true);
   const [descIsAi, setDescIsAi] = useState(true);
+  const [pointsIsAi, setPointsIsAi] = useState(true);
+  const [targetIsAi, setTargetIsAi] = useState(true);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const detailImageInputRef = useRef<HTMLInputElement>(null);
 
+  /**
+   * 셀링 포인트·메인 타겟 수정으로 상세 설명이 다시 생성되면 입력값도 그 결과로 갈아 끼운다.
+   * (props가 바뀔 때 state를 맞추는 경우라 effect가 아니라 렌더 중 조정 — react.dev 권장 패턴)
+   */
+  const [appliedRevision, setAppliedRevision] = useState(aiRevision);
+  if (appliedRevision !== aiRevision) {
+    setAppliedRevision(aiRevision);
+    setDescDraft(description);
+    setDescIsAi(true);
+  }
+
   // 저장하기 — 값 변경 시만 활성
-  const changed = nameDraft !== name || descDraft !== description;
+  const changed =
+    nameDraft !== name ||
+    descDraft !== description ||
+    pointsDraft !== sellingPoints ||
+    targetDraft !== mainTarget;
 
   const scrollTo = (tab: 'text' | 'image') => {
     setActiveTab(tab);
@@ -151,11 +192,68 @@ const DetailEditPanel = ({
         />
       </Field>
 
+      {/*
+        셀링 포인트·메인 타겟 (시연 11단계) — 상품 정보로 돌아가지 않고 이 자리에서 직접 타이핑해
+        고치면, 저장 시 상세 설명과 상세 이미지가 그 내용으로 다시 생성된다.
+      */}
+      <Field>
+        <LabelRow>
+          <span>셀링 포인트</span>
+          <CopyButton
+            type="button"
+            aria-label="셀링 포인트 복사"
+            disabled={pointsDraft === ''}
+            onClick={() => copyText(pointsDraft)}
+          >
+            <img src={salesCopyIcon} alt="" aria-hidden />
+          </CopyButton>
+        </LabelRow>
+        <TextareaSet
+          aria-label="셀링 포인트"
+          rows={3}
+          aiFilled={pointsIsAi}
+          value={pointsDraft}
+          placeholder="상품의 셀링 포인트를 입력해 주세요."
+          onChange={(e) => {
+            setPointsDraft(e.target.value);
+            setPointsIsAi(false);
+          }}
+        />
+      </Field>
+
+      <Field>
+        <LabelRow>
+          <span>메인 타겟</span>
+        </LabelRow>
+        <InputSet
+          aria-label="메인 타겟"
+          aiFilled={targetIsAi}
+          value={targetDraft}
+          placeholder="상품의 메인 타겟을 입력해 주세요."
+          onChange={(e) => {
+            setTargetDraft(e.target.value);
+            setTargetIsAi(false);
+          }}
+        />
+      </Field>
+
+      <RegenerateHint>
+        셀링 포인트·메인 타겟을 고쳐 저장하면 상세 설명과 상세 이미지가 다시 생성됩니다.
+      </RegenerateHint>
+
       <Button
         variant="secondary"
         fullWidth
+        loading={regenerating}
         disabled={!changed}
-        onClick={() => onSaveText(nameDraft, descDraft)}
+        onClick={() =>
+          onSaveText({
+            name: nameDraft,
+            description: descDraft,
+            sellingPoints: pointsDraft,
+            mainTarget: targetDraft,
+          })
+        }
       >
         저장하기
       </Button>
@@ -321,6 +419,15 @@ const LabelRow = styled.div`
     ${({ theme }) => theme.typography.label02};
     color: ${({ theme }) => theme.colors.textPrimary};
   }
+`;
+
+/** 셀링 포인트·메인 타겟 수정이 무엇을 다시 만드는지 알려주는 한 줄 (재생성 트리거 안내) */
+const RegenerateHint = styled.p`
+  padding: ${({ theme }) => `${theme.spacing.xs} 10px`};
+  border-radius: ${({ theme }) => theme.radius.md};
+  background: ${({ theme }) => theme.colors.primaryLight};
+  ${({ theme }) => theme.typography.caption01};
+  color: ${({ theme }) => theme.colors.primary};
 `;
 
 const CopyButton = styled.button`

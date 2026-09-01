@@ -1,8 +1,11 @@
 import mallangBlue from '@/assets/images/mallang-blue.png';
-import mallangPairBottom from '@/assets/images/mallang-pair-bottom.png';
-import mallangPairTop from '@/assets/images/mallang-pair-top.png';
 import mallangPurple from '@/assets/images/mallang-purple.png';
 import mallangSet from '@/assets/images/detailimg-result.png';
+/* 상세 이미지 — 상품 사진이 아니라 카피·스펙이 올라간 Shopee 상세 배너 (QA: 상품이미지=상세이미지 분리) */
+import pdpDetail01 from '@/assets/images/pdp-detail-01.svg';
+import pdpDetail02 from '@/assets/images/pdp-detail-02.svg';
+import pdpDetail11 from '@/assets/images/pdp-detail-11.svg';
+import pdpDetail12 from '@/assets/images/pdp-detail-12.svg';
 
 /* ─────────────────────────── SEL-01-01 판매 정보 입력 ─────────────────────────── */
 
@@ -116,12 +119,20 @@ export const categoryAttrsMock: CategoryAttr[] = [
   { key: 'age', label: '권장 연령', value: '만 14세 이상 소장용' },
 ];
 
-/** 1단·2단 속성 추천값 (Shopee 제안 변형 타입, 목) */
+/**
+ * 1단·2단 속성 (Shopee 카테고리 스키마가 정한 변형 타입 + AI 추천 옵션값).
+ *
+ * Figma productregist_detail 기준 — 옵션 타입은 셀러가 이름을 지어 넣는 값이 아니라
+ * 카테고리가 내려주는 고정 속성이라, 화면에는 '옵션명' 입력칸 대신 '제공 색상 *' 같은
+ * 라벨(label)로 뜨고 그 아래에 옵션값만 입력한다.
+ * name은 재고 매트릭스·상세 페이지 옵션 표기에 쓰는 짧은 이름이다.
+ */
 export const optionLevel1Mock = {
-  name: '캐릭터',
+  name: '색상',
+  label: '제공 색상',
   values: ['모카 (블루)', '코코 (블랙)', '포미 (화이트)', '베리 (퍼플)'],
 };
-export const optionLevel2Mock = { name: '사이즈', values: ['20cm', '30cm'] };
+export const optionLevel2Mock = { name: '사이즈', label: '제공 사이즈', values: ['20cm', '30cm'] };
 
 /* ─────────────────────────── 재고 (SEL·OPS 공용) ─────────────────────────── */
 
@@ -184,8 +195,9 @@ export const detailContentMock: { ko: PdpContent; local: PdpContent } = {
       '대한민국에서 직접 발송 · 4~7일 도착',
     ],
     shipping: { region: '베트남 전 지역 배송', fee: '무료배송 · Shopee SLS', eta: '4 ~ 7일 이내' },
+    /* 옵션 표기는 판매 정보에서 확정한 카테고리 속성(제공 색상·제공 사이즈)과 같은 이름을 쓴다 */
     options: [
-      { label: '캐릭터', values: ['모카 (블루)', '코코 (블랙)', '포미 (화이트)', '베리 (퍼플)'] },
+      { label: '색상', values: ['모카 (블루)', '코코 (블랙)', '포미 (화이트)', '베리 (퍼플)'] },
       { label: '사이즈', values: ['20cm', '30cm'] },
     ],
     stockNote: '재고 156개 남음',
@@ -223,7 +235,7 @@ export const detailContentMock: { ko: PdpContent; local: PdpContent } = {
     },
     options: [
       {
-        label: 'Nhân vật',
+        label: 'Màu sắc',
         values: ['Mocha (Xanh)', 'Coco (Đen)', 'Pomi (Trắng)', 'Berry (Tím)'],
       },
       { label: 'Kích thước', values: ['20cm', '30cm'] },
@@ -278,14 +290,79 @@ export interface DetailImageItem {
   src: string;
 }
 
+/**
+ * 상세 이미지 초안 (현지화 콘텐츠 에이전트 R-003가 셀링 포인트로 생성한 배너).
+ * 상품 이미지(제품 사진)와 달리 카피·스펙이 얹힌 세로 배너다.
+ */
 export const detailImagesMock: DetailImageItem[] = [
-  { id: 'detail-1', label: '상세 이미지 1', src: mallangPairTop },
-  { id: 'detail-2', label: '상세 이미지 2', src: mallangPairBottom },
+  { id: 'detail-1', label: '상세 이미지 1', src: pdpDetail01 },
+  { id: 'detail-2', label: '상세 이미지 2', src: pdpDetail02 },
 ];
+
+/**
+ * 셀링 포인트·메인 타겟을 고쳤을 때 다시 생성되는 상세 이미지 (EDT → DTL 재생성 시나리오).
+ * 초안과 색·구도·카피가 확연히 달라야 재생성된 것이 화면에서 바로 보인다.
+ */
+export const detailImagesRegeneratedMock: DetailImageItem[] = [
+  { id: 'detail-regen-1', label: '상세 이미지 1', src: pdpDetail11 },
+  { id: 'detail-regen-2', label: '상세 이미지 2', src: pdpDetail12 },
+];
+
+/**
+ * 셀링 포인트 문자열을 항목 배열로.
+ * 항목 사이는 보통 ' · '처럼 띄어쓴 가운뎃점이라 그것을 먼저 쓰고,
+ * 없을 때만 붙여 쓴 가운뎃점·쉼표·줄바꿈으로 나눈다.
+ * ('커플·친구 선물 추천'처럼 항목 안에 붙어 있는 가운뎃점이 잘리지 않게 한다)
+ */
+export const splitSellingPoints = (sellingPoints: string): string[] => {
+  const separator = /\s[·•]\s|\n/.test(sellingPoints) ? /\s[·•]\s|\n/ : /[·•,\n]/;
+  return sellingPoints
+    .split(separator)
+    .map((point) => point.trim())
+    .filter(Boolean);
+};
+
+/**
+ * 셀러가 고친 셀링 포인트·메인 타겟으로 상세 설명을 다시 쓴다 (R-003 재생성 목).
+ * 입력한 문장이 그대로 결과에 드러나야 '수정 → 재생성'이 화면에서 확인되므로,
+ * 새 수치를 지어내지 않고 입력값을 문단에 그대로 엮는다.
+ */
+export const buildRegeneratedDescriptionKo = (sellingPoints: string, mainTarget: string) => {
+  const points = splitSellingPoints(sellingPoints);
+  const lead = points.length > 0 ? `${points.join(' · ')}.` : '';
+  const target = mainTarget.trim() ? `${mainTarget.trim()}에게 특히 잘 맞는 구성입니다.` : '';
+  return [
+    lead,
+    target,
+    '모카·코코·포미·베리 네 캐릭터를 20cm와 30cm 두 사이즈로 준비했고, 선물 상자와 방습 파우치를 함께 넣어 받은 그대로 선물할 수 있습니다.',
+    '폴리에스터 극세사 원단이라 촉감이 부드럽고 봉제선이 튼튼해 손세탁이 가능하며, 주문은 대한민국 서울에서 직접 발송합니다.',
+  ]
+    .filter(Boolean)
+    .join(' ');
+};
+
+/** 재생성된 한국어 USP — 셀러가 적은 셀링 포인트를 그대로 앞세운다 (최대 4줄) */
+export const buildRegeneratedUspsKo = (sellingPoints: string) => {
+  const points = splitSellingPoints(sellingPoints).slice(0, 3);
+  return [...points, '대한민국에서 직접 발송 · 4~7일 도착'];
+};
+
+/** 재생성된 현지어(베트남어) 본문 — 실시간 번역 대신 재생성 결과 목 */
+export const regeneratedLocalContentMock = {
+  usps: [
+    'Tặng kèm hộp quà + túi chống ẩm',
+    'Vải nhung polyester siêu mềm · Giặt tay được',
+    'Trang trí bàn làm việc · Quà tặng bạn bè',
+    'Gửi trực tiếp từ Hàn Quốc · Nhận sau 4~7 ngày',
+  ],
+  description:
+    'Mallang Friends là bộ sưu tập gấu bông nhân vật chính hãng đến từ Hàn Quốc, được đóng gói sẵn trong hộp quà kèm túi chống ẩm nên có thể tặng ngay mà không cần gói lại. Size 20cm vừa vặn để trang trí bàn làm việc, size 30cm phù hợp đặt trên giường hoặc sofa. Vải nhung polyester siêu mềm, đường may chắc chắn và có thể giặt tay ở nhiệt độ dưới 30°C. Hàng được gửi trực tiếp từ Seoul, Hàn Quốc.',
+} as const;
 
 /* ─────────────────────────── OPS-01-01 판매 관리 ─────────────────────────── */
 
-export type OrderShippingStatus = '결제 확인' | '상품 준비 중' | '발송 완료' | '배송 중' | '배송 완료';
+export type OrderShippingStatus =
+  '결제 확인' | '상품 준비 중' | '발송 완료' | '배송 중' | '배송 완료';
 export type OrderClaimStatus = '없음' | '접수' | '처리 중' | '완료';
 
 export interface OrderRow {

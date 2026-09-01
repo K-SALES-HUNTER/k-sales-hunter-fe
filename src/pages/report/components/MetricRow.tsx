@@ -36,7 +36,7 @@ const Row = styled.div`
   min-height: 24px;
 `;
 
-/* MetricBar (Figma 265:2264) — 라벨 135px, 뱃지+점수 75px 고정 슬롯 */
+/* MetricBar (Figma 265:2264) — 라벨 135px, 뱃지+점수 고정 슬롯 */
 const Label = styled.span`
   width: 135px;
   flex-shrink: 0;
@@ -48,11 +48,13 @@ const BadgeSlot = styled.span`
   display: flex;
   align-items: center;
   gap: ${({ theme }) => theme.spacing.xs};
-  width: 75px;
+  /* '보통 64점'처럼 긴 조합에서도 한 줄에 들어가야 한다 (줄바꿈되면 행 높이가 튄다) */
+  width: 90px;
   flex-shrink: 0;
 `;
 
 const Score = styled.span`
+  white-space: nowrap;
   ${({ theme }) => theme.typography.label02};
   color: ${({ theme }) => theme.colors.textPrimary};
 `;

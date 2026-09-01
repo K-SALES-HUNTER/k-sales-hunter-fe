@@ -26,7 +26,8 @@ export const SectionTabs = styled.div`
   top: var(--shell-sticky-h, 197px);
   z-index: 9;
   display: flex;
-  gap: ${({ theme }) => theme.spacing.xs};
+  /* 판매 정보·판매 관리의 섹션 탭(components/SectionTabs)과 같은 16px 간격 */
+  gap: ${({ theme }) => theme.spacing.md};
   padding: ${({ theme }) => `${theme.spacing.xs} ${theme.spacing.xs}`};
   margin: ${({ theme }) => `-${theme.spacing.xs} 0`};
   background: ${({ theme }) => theme.colors.surface};
