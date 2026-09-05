@@ -10,8 +10,15 @@ import Modal from '@/components/common/Modal';
 import ProductShell from '@/components/layout/ProductShell';
 import { useProduct } from '@/hooks/useProducts';
 import { useSalesOps } from '@/hooks/useSales';
-import { shippingMethodsMock, stockRowsMock, type ShippingMethodId } from '@/mocks/sales';
+import {
+  initialSalesOpsMock,
+  shippingMethodsMock,
+  stockRowsMock,
+  type ShippingMethodId,
+} from '@/mocks/sales';
 import { buildPath } from '@/routes/paths';
+import { productsMock } from '@/mocks/products';
+import { progressKey, useDemoProgressStore } from '@/stores/useDemoProgressStore';
 import { salesOpsKey, useSalesOpsStore } from '@/stores/useSalesOpsStore';
 import OrderClaimSection from './components/OrderClaimSection';
 import PriceManageSection from './components/PriceManageSection';
@@ -52,7 +59,32 @@ const SalesOpsPage = () => {
   const navigate = useNavigate();
 
   const { data: product } = useProduct(productId);
-  const { data: ops } = useSalesOps(productId, countryCode);
+  const { data: fetchedOps } = useSalesOps(productId, countryCode);
+  const progress = useDemoProgressStore((s) => s.patchByKey[progressKey(productId, countryCode)]);
+  const revealSales = useDemoProgressStore((s) => s.revealSales);
+  // 원래 판매 중인 기존 상품은 유지. 새로 업로드한 상품/국가는 클릭 전까지 초기 상태.
+  const originallySelling =
+    productsMock
+      .find((p) => p.id === productId)
+      ?.countries.some((c) => c.code === countryCode && c.salesStatus !== '판매전') ?? false;
+  const hasPerformance =
+    progress?.salesRevealed ?? (progress?.salesStatus ? false : originallySelling);
+  const uploadedDate = progress?.uploadedAt
+    ? new Date(progress.uploadedAt).toLocaleDateString('sv-SE')
+    : '방금 등록';
+  const ops =
+    fetchedOps &&
+    (hasPerformance
+      ? fetchedOps
+      : {
+          ...initialSalesOpsMock,
+          link: {
+            ...fetchedOps.link,
+            registeredAt: uploadedDate,
+            updatedAt: uploadedDate,
+            lastSync: uploadedDate,
+          },
+        });
 
   const key = salesOpsKey(productId, countryCode);
   const statusOverride = useSalesOpsStore((s) => s.statusByKey[key]);
@@ -119,7 +151,15 @@ const SalesOpsPage = () => {
         </StopBanner>
       )}
 
-      <PageTitle>판매 현황</PageTitle>
+      <PageTitle>
+        <TitleTrigger
+          type="button"
+          aria-pressed={hasPerformance}
+          onClick={() => revealSales(productId, countryCode)}
+        >
+          판매 현황
+        </TitleTrigger>
+      </PageTitle>
 
       <SectionTabs
         tabs={[
@@ -237,77 +277,81 @@ const SalesOpsPage = () => {
             </StatGrid>
 
             {/* Figma 12:14726 — 좌: 판매량 라인차트, 우: 월간 매출/수익 추이 막대차트 */}
-            <ChartRow>
-              <ChartCol>
-                <QtyLegend>
-                  <LegendSwatch aria-hidden />
-                  판매량
-                </QtyLegend>
-                <AreaTrendChart
-                  data={[...ops.salesTrend]}
-                  height={140}
-                  formatValue={(v) => `${v}개`}
-                />
-              </ChartCol>
-              <ChartCol>
-                <ChartLabel>월간 매출/수익 추이</ChartLabel>
-                <BarChart
-                  data={ops.performance.monthlyRevenue.map((m) => ({
-                    label: m.label,
-                    value: m.revenue,
-                    /**
-                     * 진한 아래 구간 = 그 달 매출에서 순이익이 차지하는 몫.
-                     * 매출은 ₫, 순이익은 ₩이라 금액을 그대로 겹칠 수 없으므로,
-                     * 같은 통화 기준 마진율(순이익 ₩ ÷ 매출을 ₩로 환산)로 비율만 그린다.
-                     */
-                    secondaryRatio: m.profit / (m.revenue * VND_TO_KRW),
-                    secondaryTitle: `${m.label} 순이익 · ₩${m.profit.toLocaleString()}`,
-                  }))}
-                  height={140}
-                  /* 매출은 구매자 결제 기준 현지 통화 ₫ (QA-11) */
-                  formatValue={(v) => `₫${v.toLocaleString()}`}
-                />
-                {/* 범례는 차트에 그려진 기간의 합계 — 상단 지표(최근 30일)와 기간이 다르다.
+            {hasPerformance && (
+              <>
+                <ChartRow>
+                  <ChartCol>
+                    <QtyLegend>
+                      <LegendSwatch aria-hidden />
+                      판매량
+                    </QtyLegend>
+                    <AreaTrendChart
+                      data={[...ops.salesTrend]}
+                      height={140}
+                      formatValue={(v) => `${v}개`}
+                    />
+                  </ChartCol>
+                  <ChartCol>
+                    <ChartLabel>월간 매출/수익 추이</ChartLabel>
+                    <BarChart
+                      data={ops.performance.monthlyRevenue.map((m) => ({
+                        label: m.label,
+                        value: m.revenue,
+                        /**
+                         * 진한 아래 구간 = 그 달 매출에서 순이익이 차지하는 몫.
+                         * 매출은 ₫, 순이익은 ₩이라 금액을 그대로 겹칠 수 없으므로,
+                         * 같은 통화 기준 마진율(순이익 ₩ ÷ 매출을 ₩로 환산)로 비율만 그린다.
+                         */
+                        secondaryRatio: m.profit / (m.revenue * VND_TO_KRW),
+                        secondaryTitle: `${m.label} 순이익 · ₩${m.profit.toLocaleString()}`,
+                      }))}
+                      height={140}
+                      /* 매출은 구매자 결제 기준 현지 통화 ₫ (QA-11) */
+                      formatValue={(v) => `₫${v.toLocaleString()}`}
+                    />
+                    {/* 범례는 차트에 그려진 기간의 합계 — 상단 지표(최근 30일)와 기간이 다르다.
                     매출은 현지 통화 ₫, 순이익은 셀러 기준 원화 ₩ (Figma 12:14726 통화 규칙) */}
-                <LegendRow>
-                  <LegendItem>매출 ₫{monthlyTotal.revenue.toLocaleString()}</LegendItem>
-                  <LegendItem $tone="positive">
-                    순이익 ₩{monthlyTotal.profit.toLocaleString()}
-                  </LegendItem>
-                </LegendRow>
-              </ChartCol>
-            </ChartRow>
+                    <LegendRow>
+                      <LegendItem>매출 ₫{monthlyTotal.revenue.toLocaleString()}</LegendItem>
+                      <LegendItem $tone="positive">
+                        순이익 ₩{monthlyTotal.profit.toLocaleString()}
+                      </LegendItem>
+                    </LegendRow>
+                  </ChartCol>
+                </ChartRow>
 
-            {/* 총 비용 차감 구조 — 순이익 산출 과정 단계별 공개 */}
-            <Block>
-              <SubTitle>총 비용 차감 구조 (판매가 → 순이익)</SubTitle>
-              <CostTable>
-                <tbody>
-                  {/* Figma 12:14726 — 첫 행(총 매출)과 마지막 행(예상 순이익)을 강조 */}
-                  {ops.performance.costBreakdown.map((row, index) => (
-                    <CostRow
-                      key={row.label}
-                      $emphasis={index === 0 || ('emphasis' in row && Boolean(row.emphasis))}
-                    >
-                      <td>{row.label}</td>
-                      <td>{row.amountText}</td>
-                    </CostRow>
-                  ))}
-                </tbody>
-              </CostTable>
-              {/* Figma 12:14726 — 셰브런 + 텍스트형 토글 */}
-              <BasisToggle
-                type="button"
-                aria-expanded={basisOpen}
-                onClick={() => setBasisOpen((prev) => !prev)}
-              >
-                <BasisChevron aria-hidden $open={basisOpen}>
-                  ⌄
-                </BasisChevron>
-                계산 기준 보기
-              </BasisToggle>
-              {basisOpen && <NoticeBox>{ops.performance.calcBasis}</NoticeBox>}
-            </Block>
+                {/* 총 비용 차감 구조 — 순이익 산출 과정 단계별 공개 */}
+                <Block>
+                  <SubTitle>총 비용 차감 구조 (판매가 → 순이익)</SubTitle>
+                  <CostTable>
+                    <tbody>
+                      {/* Figma 12:14726 — 첫 행(총 매출)과 마지막 행(예상 순이익)을 강조 */}
+                      {ops.performance.costBreakdown.map((row, index) => (
+                        <CostRow
+                          key={row.label}
+                          $emphasis={index === 0 || ('emphasis' in row && Boolean(row.emphasis))}
+                        >
+                          <td>{row.label}</td>
+                          <td>{row.amountText}</td>
+                        </CostRow>
+                      ))}
+                    </tbody>
+                  </CostTable>
+                  {/* Figma 12:14726 — 셰브런 + 텍스트형 토글 */}
+                  <BasisToggle
+                    type="button"
+                    aria-expanded={basisOpen}
+                    onClick={() => setBasisOpen((prev) => !prev)}
+                  >
+                    <BasisChevron aria-hidden $open={basisOpen}>
+                      ⌄
+                    </BasisChevron>
+                    계산 기준 보기
+                  </BasisToggle>
+                  {basisOpen && <NoticeBox>{ops.performance.calcBasis}</NoticeBox>}
+                </Block>
+              </>
+            )}
           </Card>
 
           {/* 가격 관리 */}
@@ -349,6 +393,17 @@ const SalesOpsPage = () => {
  * 섹션 탭은 페이지 전체에서 sticky여야 해서 함께 감쌀 수 없으므로,
  * ProductShell 콘텐츠 기본 간격(24px)을 제목 쪽에서 되돌려 12px로 좁힌다.
  */
+const TitleTrigger = styled.button`
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
+  cursor: default;
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.primary};
+    outline-offset: 4px;
+  }
+`;
+
 const PageTitle = styled.h2`
   margin-bottom: -12px;
   padding: ${({ theme }) => `0 ${theme.spacing.xs}`};
