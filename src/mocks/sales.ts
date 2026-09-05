@@ -559,4 +559,52 @@ export const salesOpsMock = {
   },
 } as const;
 
-export type SalesOpsData = typeof salesOpsMock;
+/** API 모델은 목의 특정 숫자/문자 리터럴에 종속되지 않는다. */
+type Widen<T> = T extends string
+  ? string
+  : T extends number
+    ? number
+    : T extends boolean
+      ? boolean
+      : T extends readonly (infer U)[]
+        ? readonly Widen<U>[]
+        : T extends object
+          ? { [K in keyof T]: Widen<T[K]> }
+          : T;
+export type SalesOpsData = Omit<Widen<typeof salesOpsMock>, 'orders' | 'priceManage'> & {
+  orders: {
+    summary: { newOrders: number; claims: number; needAction: number };
+    rows: readonly OrderRow[];
+  };
+  priceManage: {
+    currentPrice: number;
+    fxNote: string;
+    note: string;
+    impacts: readonly PriceImpactRow[];
+    history: readonly PriceHistoryRow[];
+  };
+};
+
+/** Figma 71:12238 — 첫 주문 전. 판매 설정/재고는 실적과 별개로 유지한다. */
+export const initialSalesOpsMock: SalesOpsData = {
+  ...salesOpsMock,
+  summary: {
+    headline: '상품 등록이 완료되었습니다. 첫 판매를 기다리고 있어요.',
+    description: '첫 주문이 들어오면 주문 현황과 판매 성과를 확인할 수 있습니다.',
+    trend: [],
+  },
+  orders: { summary: { newOrders: 0, claims: 0, needAction: 0 }, rows: [] },
+  salesTrend: [],
+  performance: {
+    qty: '0건',
+    revenue: '₫0',
+    bepRemaining: '240개 남음',
+    profit: '₩0',
+    margin: '0%',
+    note: '아직 판매 실적이 없습니다. 첫 주문이 발생하면 판매 성과가 표시됩니다.',
+    monthlyRevenue: [],
+    costBreakdown: [],
+    calcBasis: '',
+  },
+  priceManage: { ...salesOpsMock.priceManage, history: [] },
+};

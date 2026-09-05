@@ -1,11 +1,7 @@
 import { useState } from 'react';
 import styled from '@emotion/styled';
 import Dropdown from '@/components/common/Dropdown';
-import {
-  orderClaimStatusOptions,
-  orderShippingStatusOptions,
-  type OrderRow,
-} from '@/mocks/sales';
+import { orderClaimStatusOptions, orderShippingStatusOptions, type OrderRow } from '@/mocks/sales';
 import {
   CardTitle,
   EmptyText,
@@ -66,61 +62,66 @@ const OrderClaimSection = ({ summary, rows, disabled = false }: OrderClaimSectio
         </StatBox>
       </StatGrid>
 
-      {rows.length === 0 ? (
-        <EmptyText>아직 들어온 주문이 없습니다. 주문이 생기면 여기에 표시됩니다.</EmptyText>
-      ) : (
-        <TableScroll>
-          <OrderTable>
-            <thead>
+      <TableScroll>
+        <OrderTable>
+          <thead>
+            <tr>
+              <th scope="col">주문일</th>
+              <th scope="col">주문번호</th>
+              <th scope="col">수량/옵션</th>
+              <th scope="col">결제 금액</th>
+              <th scope="col">배송 처리 상태</th>
+              <th scope="col">클레임</th>
+              <th scope="col">처리 상태</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 && (
               <tr>
-                <th scope="col">주문일</th>
-                <th scope="col">주문번호</th>
-                <th scope="col">수량/옵션</th>
-                <th scope="col">결제 금액</th>
-                <th scope="col">배송 처리 상태</th>
-                <th scope="col">클레임</th>
-                <th scope="col">처리 상태</th>
+                <td colSpan={7}>
+                  <EmptyText>
+                    아직 들어온 주문이 없습니다. 주문이 생기면 여기에 표시됩니다.
+                  </EmptyText>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.id}>
-                  <td>{row.date}</td>
-                  <td>{row.orderNo}</td>
-                  <td>{row.option}</td>
-                  <td>{row.amount}</td>
-                  <DropdownCell>
-                    <Dropdown
-                      aria-label={`${row.orderNo} 배송 처리 상태`}
-                      options={toOptions(orderShippingStatusOptions)}
-                      value={shippingStatus[row.id] ?? row.shippingStatus}
-                      disabled={disabled}
-                      onChange={(e) =>
-                        setShippingStatus((prev) => ({ ...prev, [row.id]: e.target.value }))
-                      }
-                    />
-                  </DropdownCell>
-                  <td>{row.claim}</td>
-                  <DropdownCell>
-                    <Dropdown
-                      aria-label={`${row.orderNo} 클레임 처리 상태`}
-                      options={toOptions(orderClaimStatusOptions)}
-                      value={claimStatus[row.id] ?? row.claimStatus}
-                      disabled={disabled || row.claim === '없음'}
-                      onChange={(e) =>
-                        setClaimStatus((prev) => ({ ...prev, [row.id]: e.target.value }))
-                      }
-                    />
-                  </DropdownCell>
-                </tr>
-              ))}
-            </tbody>
-          </OrderTable>
-        </TableScroll>
-      )}
+            )}
+            {rows.map((row) => (
+              <tr key={row.id}>
+                <td>{row.date}</td>
+                <td>{row.orderNo}</td>
+                <td>{row.option}</td>
+                <td>{row.amount}</td>
+                <DropdownCell>
+                  <Dropdown
+                    aria-label={`${row.orderNo} 배송 처리 상태`}
+                    options={toOptions(orderShippingStatusOptions)}
+                    value={shippingStatus[row.id] ?? row.shippingStatus}
+                    disabled={disabled}
+                    onChange={(e) =>
+                      setShippingStatus((prev) => ({ ...prev, [row.id]: e.target.value }))
+                    }
+                  />
+                </DropdownCell>
+                <td>{row.claim}</td>
+                <DropdownCell>
+                  <Dropdown
+                    aria-label={`${row.orderNo} 클레임 처리 상태`}
+                    options={toOptions(orderClaimStatusOptions)}
+                    value={claimStatus[row.id] ?? row.claimStatus}
+                    disabled={disabled || row.claim === '없음'}
+                    onChange={(e) =>
+                      setClaimStatus((prev) => ({ ...prev, [row.id]: e.target.value }))
+                    }
+                  />
+                </DropdownCell>
+              </tr>
+            ))}
+          </tbody>
+        </OrderTable>
+      </TableScroll>
 
       {/* 페이지 인디케이터 (Figma 597:9571) — 목 데이터는 1페이지 */}
-      {rows.length > 0 && <PageIndicator aria-label="1 페이지">1</PageIndicator>}
+      <PageIndicator aria-label="1 페이지">1</PageIndicator>
     </Section>
   );
 };
