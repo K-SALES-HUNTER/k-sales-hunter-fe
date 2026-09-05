@@ -31,6 +31,9 @@ export interface CountryProgressPatch {
   hasSalesInfo?: boolean;
   hasDetailPage?: boolean;
   salesStatus?: SalesStatus;
+  /** 업로드와 실적 발생은 별개. 제목 클릭으로 시연 실적을 공개한다. */
+  salesRevealed?: boolean;
+  uploadedAt?: string;
 }
 
 interface DemoProgressState {
@@ -42,6 +45,7 @@ interface DemoProgressState {
   markSalesInfoSaved: (productId: number, countryCode: string) => void;
   markDetailPageCreated: (productId: number, countryCode: string) => void;
   markUploaded: (productId: number, countryCode: string) => void;
+  revealSales: (productId: number, countryCode: string) => void;
   /** 시연을 처음부터 다시 하기 위한 초기화 */
   resetDemo: () => void;
 }
@@ -85,8 +89,12 @@ export const useDemoProgressStore = create<DemoProgressState>()(
             hasSalesInfo: true,
             hasDetailPage: true,
             salesStatus: '판매중',
+            salesRevealed: false,
+            uploadedAt: new Date().toISOString(),
           }),
         ),
+      revealSales: (productId, countryCode) =>
+        set((s) => patch(s, productId, countryCode, { salesRevealed: true })),
       resetDemo: () => set({ registeredProductIds: [], patchByKey: {} }),
     }),
     {

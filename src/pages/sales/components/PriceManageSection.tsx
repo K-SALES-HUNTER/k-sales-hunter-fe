@@ -3,7 +3,17 @@ import styled from '@emotion/styled';
 import InputSet from '@/components/common/InputSet';
 import { SALES_STEP_DELAY_MS } from '@/apis/sales';
 import type { PriceHistoryRow, PriceImpactRow } from '@/mocks/sales';
-import { Block, Card, CardTitle, NoticeBox, SolidButton, SubTitle, Table, TableScroll } from './ui';
+import {
+  Block,
+  Card,
+  CardTitle,
+  EmptyText,
+  NoticeBox,
+  SolidButton,
+  SubTitle,
+  Table,
+  TableScroll,
+} from './ui';
 
 interface PriceManageSectionProps {
   currentPrice: number;
@@ -108,6 +118,13 @@ const PriceManageSection = ({
               </tr>
             </thead>
             <tbody>
+              {history.length === 0 && (
+                <tr>
+                  <td colSpan={3}>
+                    <EmptyText>아직 가격 변경 기록이 없습니다.</EmptyText>
+                  </td>
+                </tr>
+              )}
               {history.map((row) => (
                 <tr key={row.date}>
                   <td>{row.date}</td>
