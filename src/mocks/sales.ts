@@ -2,7 +2,7 @@ import mallangBlue from '@/assets/images/mallang-blue.png';
 import mallangPurple from '@/assets/images/mallang-purple.png';
 import mallangSet from '@/assets/images/detailimg-result.png';
 /* 상세 이미지 — 상품 사진이 아니라 카피·스펙이 올라간 Shopee 상세 배너 (QA: 상품이미지=상세이미지 분리) */
-import pdpDetail01 from '@/assets/images/pdp-detail-01.svg';
+import pdpDetail01 from '@/assets/images/detail_image_example.png';
 import pdpDetail02 from '@/assets/images/pdp-detail-02.svg';
 import pdpDetail11 from '@/assets/images/pdp-detail-11.svg';
 import pdpDetail12 from '@/assets/images/pdp-detail-12.svg';
@@ -296,7 +296,7 @@ export interface DetailImageItem {
  */
 export const detailImagesMock: DetailImageItem[] = [
   { id: 'detail-1', label: '상세 이미지 1', src: pdpDetail01 },
-  { id: 'detail-2', label: '상세 이미지 2', src: pdpDetail02 },
+  // { id: 'detail-2', label: '상세 이미지 2', src: pdpDetail02 },
 ];
 
 /**
