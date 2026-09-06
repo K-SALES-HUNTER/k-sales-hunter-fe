@@ -33,11 +33,7 @@ const AiPanel = ({ recommendedPrompts }: AiPanelProps) => {
 
   if (collapsed) {
     return (
-      <CollapsedBar
-        type="button"
-        onClick={() => setCollapsed(false)}
-        aria-label="AI 패널 펼치기"
-      >
+      <CollapsedBar type="button" onClick={() => setCollapsed(false)} aria-label="AI 패널 펼치기">
         <img src={aiSparkleIcon} alt="" />
       </CollapsedBar>
     );
@@ -61,15 +57,7 @@ const AiPanel = ({ recommendedPrompts }: AiPanelProps) => {
       </Header>
 
       <Body ref={scrollRef}>
-        {messages.length === 0 ? (
-          <PromptList>
-            {recommendedPrompts.map((prompt) => (
-              <PromptButton key={prompt} type="button" onClick={() => send(prompt)}>
-                {prompt}
-              </PromptButton>
-            ))}
-          </PromptList>
-        ) : (
+        {messages.length > 0 && (
           <ChatList>
             {messages.map((message) =>
               message.role === 'user' ? (
@@ -81,6 +69,13 @@ const AiPanel = ({ recommendedPrompts }: AiPanelProps) => {
             {replying && <Answer aria-live="polite">답변을 작성하고 있어요…</Answer>}
           </ChatList>
         )}
+        <PromptList aria-label="현재 페이지 추천 질문">
+          {recommendedPrompts.map((prompt) => (
+            <PromptButton key={prompt} type="button" onClick={() => send(prompt)}>
+              {prompt}
+            </PromptButton>
+          ))}
+        </PromptList>
       </Body>
 
       <InputRow onSubmit={handleSubmit}>
@@ -190,6 +185,8 @@ const CollapseButton = styled.button`
 const Body = styled.div`
   flex: 1;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
   padding: ${({ theme }) => `${theme.spacing.lg} 0`};
 `;
@@ -197,7 +194,9 @@ const Body = styled.div`
 const PromptList = styled.div`
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
   gap: 6px;
+  margin-top: auto;
   padding: ${({ theme }) => `0 ${theme.spacing.md}`};
 `;
 
