@@ -83,8 +83,7 @@ const PdpPreview = ({
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const [qty, setQty] = useState(1);
 
-  const mainImage =
-    images.find((img) => img.id === (selectedThumbId ?? mainImageId)) ?? images[0];
+  const mainImage = images.find((img) => img.id === (selectedThumbId ?? mainImageId)) ?? images[0];
 
   return (
     <Frame>
@@ -158,8 +157,7 @@ const PdpPreview = ({
                 <OptionLabel>{option.label}</OptionLabel>
                 <ChipRow>
                   {option.values.map((value) => {
-                    const selected =
-                      (selectedOptions[option.label] ?? option.values[0]) === value;
+                    const selected = (selectedOptions[option.label] ?? option.values[0]) === value;
                     return (
                       <OptionChip
                         key={value}
@@ -188,11 +186,7 @@ const PdpPreview = ({
                   −
                 </StepButton>
                 <StepValue>{qty}</StepValue>
-                <StepButton
-                  type="button"
-                  aria-label={t.qtyUp}
-                  onClick={() => setQty((q) => q + 1)}
-                >
+                <StepButton type="button" aria-label={t.qtyUp} onClick={() => setQty((q) => q + 1)}>
                   +
                 </StepButton>
               </Stepper>
@@ -354,6 +348,10 @@ const ImageColumn = styled.div`
 
 const MainImageBox = styled.div`
   position: relative;
+  width: 100%;
+  height: 200px;
+  max-width: 320px;
+  max-height: 200px;
   border-radius: ${({ theme }) => theme.radius.lg};
   overflow: hidden;
   background: ${({ theme }) => theme.colors.bgLight};
@@ -362,8 +360,10 @@ const MainImageBox = styled.div`
 const MainImage = styled.img`
   display: block;
   width: 100%;
-  height: 200px;
-  object-fit: cover;
+  height: 100%;
+  max-width: 320px;
+  max-height: 200px;
+  object-fit: contain;
 `;
 
 const MainBadge = styled.span`
@@ -685,8 +685,9 @@ const DetailImageBox = styled.div`
 const DetailImage = styled.img`
   display: block;
   width: 100%;
-  aspect-ratio: 1000 / 667;
-  object-fit: cover;
+  height: auto;
+  max-width: 100%;
+  object-fit: contain;
 `;
 
 const DetailImageBadge = styled.span`
