@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import styled from '@emotion/styled';
 import Dropdown from '@/components/common/Dropdown';
 import InputSet from '@/components/common/InputSet';
-import { SALES_STEP_DELAY_MS } from '@/apis/sales';
+import { SALES_STEP_DELAY_MS, type SalesInfoBody, type SalesSuggestion } from '@/apis/sales';
 import {
   categoryAttrsMock,
   optionLevel1Mock,
@@ -28,22 +28,57 @@ interface StockCell {
  * 앞 단계를 저장하기 전에는 뒤 단계를 아예 렌더하지 않는다 (disabled 처리 아님).
  * 앞 단계를 수정하면 뒤 단계 저장 상태가 초기화되고 뒤 단계는 다시 숨겨진다.
  */
+/** 판매 정보 저장(PUT)에 들어가는 옵션·재고 부분. 판매가·배송 방식은 상위 화면이 합친다 */
+export type OptionStockDraft = Pick<
+  SalesInfoBody,
+  'category' | 'attrs' | 'useOptions' | 'option1' | 'option2' | 'stock'
+>;
+
+/** 목 모드 추천값 — mocks/sales.ts (시연 상품 말랑 프렌즈) */
+const MOCK_SUGGESTION: SalesSuggestion = {
+  shopeeCategoryOptions: shopeeCategoryOptionsMock,
+  shopeeCategoryDefault: shopeeCategoryDefaultMock,
+  categoryAttrs: categoryAttrsMock,
+  optionLevel1: optionLevel1Mock,
+  optionLevel2: optionLevel2Mock,
+  stockHint: '',
+};
+
+const EMPTY_OPTION = { name: '옵션', label: '옵션', values: [] as string[] };
+
 interface OptionStockSectionProps {
+  /** 실연동: 서버 AI 추천값 (GET sales-info). 없으면 목 추천값을 쓴다 */
+  suggestion?: SalesSuggestion;
+  /**
+   * 실연동: 재고·추가 금액 단계 저장 시 호출 — 상위 화면이 PUT sales-info 를 보낸다.
+   * 실패하면 그 단계는 저장되지 않은 상태로 남는다. 없으면 목 지연(0.5초)으로 저장 처리한다.
+   */
+  onSubmit?: (draft: OptionStockDraft) => Promise<void>;
   /** [DEMO-ONLY] 재고까지 저장을 마쳤을 때 — 판매 정보 완료 처리 (백엔드 연동 시 제거) */
   onSaved?: () => void;
   /** 재고 단계 저장 여부 변경 — 상위 화면이 '상세 페이지 생성' CTA 활성화를 결정하는 데 쓴다 */
   onStockSaved?: (saved: boolean) => void;
 }
 
-const OptionStockSection = ({ onSaved, onStockSaved }: OptionStockSectionProps) => {
-  const [category, setCategory] = useState(shopeeCategoryDefaultMock);
+const OptionStockSection = ({
+  suggestion = MOCK_SUGGESTION,
+  onSubmit,
+  onSaved,
+  onStockSaved,
+}: OptionStockSectionProps) => {
+  const attrSchema = suggestion.categoryAttrs;
+  const level1 = suggestion.optionLevel1 ?? EMPTY_OPTION;
+  const level2 = suggestion.optionLevel2 ?? EMPTY_OPTION;
+
+  const [category, setCategory] = useState(suggestion.shopeeCategoryDefault);
   const [attrs, setAttrs] = useState<Record<string, string>>(() =>
-    Object.fromEntries(categoryAttrsMock.map((a) => [a.key, a.value])),
+    Object.fromEntries(attrSchema.map((a) => [a.key, a.value])),
   );
   const [useOptions, setUseOptions] = useState(true);
   /* 옵션 타입(제공 색상·제공 사이즈)은 카테고리 스키마가 내려주는 값이라 셀러가 고치지 않는다 */
-  const [option1Values, setOption1Values] = useState<string[]>(optionLevel1Mock.values);
-  const [option2Values, setOption2Values] = useState<string[]>(optionLevel2Mock.values);
+  const [option1Values, setOption1Values] = useState<string[]>(level1.values);
+  const [option2Values, setOption2Values] = useState<string[]>(level2.values);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [stockCells, setStockCells] = useState<Record<string, StockCell>>({});
 
   const [saved, setSaved] = useState<Record<StepId, boolean>>({
@@ -70,6 +105,19 @@ const OptionStockSection = ({ onSaved, onStockSaved }: OptionStockSectionProps) 
 
   const saveStep = (step: StepId) => {
     setSaving(step);
+    if (onSubmit && (step === 'stock' || step === 'extra')) {
+      setSubmitError(null);
+      onSubmit(collectDraft())
+        .then(() => {
+          setSaved((prev) => ({ ...prev, [step]: true }));
+          if (step === 'stock') onSaved?.();
+        })
+        .catch(() =>
+          setSubmitError('저장하지 못했어요. 옵션 조합(최대 50개)과 입력값을 확인해 주세요.'),
+        )
+        .finally(() => setSaving(null));
+      return;
+    }
     // 목 0.5초 로딩 — 저장한 데이터에 맞는 다음 옵션·속성을 Shopee에서 받아오는 흉내
     setTimeout(() => {
       setSaving(null);
@@ -105,6 +153,21 @@ const OptionStockSection = ({ onSaved, onStockSaved }: OptionStockSectionProps) 
     setStockCells((prev) => ({ ...prev, [key]: { ...getCell(key), ...patch } }));
   };
 
+  /** 저장(PUT)용 값 — 빈 옵션값은 빼고, 옵션 미사용이면 2단을 보내지 않는다 */
+  const collectDraft = (): OptionStockDraft => ({
+    category,
+    attrs,
+    useOptions,
+    option1: { ...level1, values: option1Filled },
+    option2: useOptions ? { ...level2, values: option2Filled } : null,
+    stock: stockRows.map((row) => ({
+      option1: row.v1,
+      option2: row.v2 === '—' ? '' : row.v2,
+      qty: Number(getCell(row.key).qty) || 0,
+      extraPrice: Number(getCell(row.key).extra) || 0,
+    })),
+  });
+
   const allStockZero =
     stockRows.length > 0 && stockRows.every((row) => (Number(getCell(row.key).qty) || 0) === 0);
 
@@ -132,9 +195,9 @@ const OptionStockSection = ({ onSaved, onStockSaved }: OptionStockSectionProps) 
         <Dropdown
           label="카테고리"
           required
-          options={shopeeCategoryOptionsMock}
+          options={suggestion.shopeeCategoryOptions}
           value={category}
-          aiFilled={isAiValue(category, shopeeCategoryDefaultMock)}
+          aiFilled={isAiValue(category, suggestion.shopeeCategoryDefault)}
           loading={saving === 'category'}
           onChange={(e) => {
             setCategory(e.target.value);
@@ -157,7 +220,7 @@ const OptionStockSection = ({ onSaved, onStockSaved }: OptionStockSectionProps) 
         <StepBlock>
           <SubTitle>카테고리 속성</SubTitle>
           <FieldGrid>
-            {categoryAttrsMock.map((attr) => (
+            {attrSchema.map((attr) => (
               <InputSet
                 key={attr.key}
                 label={attr.label}
@@ -223,16 +286,16 @@ const OptionStockSection = ({ onSaved, onStockSaved }: OptionStockSectionProps) 
             '제공 색상 *' 라벨로 뜨고, 그 아래 2열 그리드에 옵션값과 '항목 추가 +'가 흐른다.
           */}
           <FieldLabel>
-            {optionLevel1Mock.label}
+            {level1.label}
             <RequiredMark aria-hidden>*</RequiredMark>
           </FieldLabel>
           <OptionGrid>
             {option1Values.map((value, index) => (
               <OptionValueCell key={index}>
                 <InputSet
-                  aria-label={`${optionLevel1Mock.label} ${index + 1}`}
+                  aria-label={`${level1.label} ${index + 1}`}
                   value={value}
-                  aiFilled={optionLevel1Mock.values.includes(value)}
+                  aiFilled={level1.values.includes(value)}
                   placeholder="1단 속성"
                   onChange={(e) => {
                     setOption1Values((prev) =>
@@ -245,7 +308,7 @@ const OptionStockSection = ({ onSaved, onStockSaved }: OptionStockSectionProps) 
                 {option1Values.length > 1 && (
                   <RemoveValueButton
                     type="button"
-                    aria-label={`${optionLevel1Mock.label} ${index + 1} 삭제`}
+                    aria-label={`${level1.label} ${index + 1} 삭제`}
                     onClick={() => {
                       setOption1Values((prev) => prev.filter((_, i) => i !== index));
                       invalidateFrom('option1');
@@ -284,16 +347,16 @@ const OptionStockSection = ({ onSaved, onStockSaved }: OptionStockSectionProps) 
         <StepBlock>
           <SubTitle>2단 속성</SubTitle>
           <FieldLabel>
-            {optionLevel2Mock.label}
+            {level2.label}
             <RequiredMark aria-hidden>*</RequiredMark>
           </FieldLabel>
           <OptionGrid>
             {option2Values.map((value, index) => (
               <OptionValueCell key={index}>
                 <InputSet
-                  aria-label={`${optionLevel2Mock.label} ${index + 1}`}
+                  aria-label={`${level2.label} ${index + 1}`}
                   value={value}
-                  aiFilled={optionLevel2Mock.values.includes(value)}
+                  aiFilled={level2.values.includes(value)}
                   placeholder="2단 속성"
                   onChange={(e) => {
                     setOption2Values((prev) =>
@@ -306,7 +369,7 @@ const OptionStockSection = ({ onSaved, onStockSaved }: OptionStockSectionProps) 
                 {option2Values.length > 1 && (
                   <RemoveValueButton
                     type="button"
-                    aria-label={`${optionLevel2Mock.label} ${index + 1} 삭제`}
+                    aria-label={`${level2.label} ${index + 1} 삭제`}
                     onClick={() => {
                       setOption2Values((prev) => prev.filter((_, i) => i !== index));
                       invalidateFrom('option2');
@@ -369,6 +432,7 @@ const OptionStockSection = ({ onSaved, onStockSaved }: OptionStockSectionProps) 
               넘어갑니다.
             </WarningNotice>
           )}
+          {submitError && <WarningNotice role="alert">{submitError}</WarningNotice>}
           <SolidButton
             fullWidth
             loading={saving === 'stock'}

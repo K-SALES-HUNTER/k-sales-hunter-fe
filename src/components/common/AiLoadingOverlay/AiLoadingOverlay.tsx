@@ -19,8 +19,8 @@ interface AnalysisStep {
  * 오케스트레이터 노드 순서(gate→market→shipping→margin→report)를 사용자 언어로 옮긴 것.
  *
  * [DEMO-ONLY] durationMs는 목 진행 속도다(총 약 7.8초). 남은 시간 표시도 이 값에서 계산한다.
- * 백엔드 연동 시: /analysis-jobs/{id}/events SSE의 단계 이벤트로 진행을 갱신하고
- * durationMs와 remainingSeconds를 삭제한다.
+ * 실연동: completedSteps prop 으로 서버 진행 단계(GET /products/{id}/analysis 폴링의 step)를 넘기면
+ * 타이머 대신 그 값으로 그린다. prop 이 없으면 목 타이머로 돈다.
  */
 const STEPS: AnalysisStep[] = [
   { task: '판매 가능 여부 확인', agent: '리스크 매니저', durationMs: 1200 },
@@ -54,6 +54,11 @@ interface AiLoadingOverlayProps {
   onComplete: () => void;
   /** 중단 확인 모달에서 '확인' 시 호출 */
   onCancel: () => void;
+  /**
+   * 실연동: 서버 기준 완료된 단계 수 (0~5). 넘기면 목 타이머 대신 이 값으로 진행한다.
+   * 5 가 되면 onComplete 를 부른다.
+   */
+  completedSteps?: number;
 }
 
 /**
@@ -84,23 +89,28 @@ const AiLoadingOverlayContent = ({
   screenName,
   onComplete,
   onCancel,
+  completedSteps,
 }: Omit<AiLoadingOverlayProps, 'open'>) => {
-  const [completed, setCompleted] = useState(0);
+  const controlled = completedSteps !== undefined;
+  const [mockCompleted, setMockCompleted] = useState(0);
+  const completed = controlled ? Math.min(completedSteps, STEPS.length) : mockCompleted;
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  // 목 진행 — 중단 확인 모달이 떠 있는 동안 일시 정지, 취소하면 현재 단계부터 재개
+  // 목 진행 — 중단 확인 모달이 떠 있는 동안 일시 정지, 취소하면 현재 단계부터 재개.
+  // 실연동은 단계를 서버가 정하므로 완료 처리만 한다 (모달이 떠 있으면 닫힐 때까지 보류).
   useEffect(() => {
     if (confirmOpen) return;
     if (completed >= STEPS.length) {
       const timer = setTimeout(onComplete, COMPLETE_DELAY_MS);
       return () => clearTimeout(timer);
     }
+    if (controlled) return;
     const timer = setTimeout(
-      () => setCompleted((count) => count + 1),
+      () => setMockCompleted((count) => count + 1),
       STEPS[completed].durationMs,
     );
     return () => clearTimeout(timer);
-  }, [confirmOpen, completed, onComplete]);
+  }, [confirmOpen, completed, controlled, onComplete]);
 
   const remaining = remainingMinutes(completed);
 

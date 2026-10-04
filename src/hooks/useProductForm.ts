@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { fetchCategoryOptions, requestAiFill } from '@/apis/productForm';
+import { USE_MOCK_API } from '@/apis/config';
+import { fetchCategoryOptions, requestAiFill, uploadImage } from '@/apis/productForm';
 
 export interface ProductFormValues {
   name: string;
@@ -21,6 +22,8 @@ export interface ProductFormImage {
   isObjectUrl: boolean;
   /** 업로드 중이면 진행률(0~1), 업로드 완료면 null (Figma ImagePreviewCard 로딩 상태) */
   uploadProgress: number | null;
+  /** 실연동: 서버에 올라간 주소 (등록·자동 채우기 요청에 쓴다). 목 모드에서는 없다 */
+  serverUrl?: string;
 }
 
 export const EMPTY_FORM_VALUES: ProductFormValues = {
@@ -51,6 +54,9 @@ const UPLOAD_TICK_MS = 60;
 export const useCategoryOptions = () =>
   useQuery({ queryKey: ['categoryOptions'], queryFn: fetchCategoryOptions });
 
+const serverUrlsOf = (images: ProductFormImage[]) =>
+  images.flatMap((image) => (image.serverUrl ? [image.serverUrl] : []));
+
 let imageIdSeq = 0;
 const nextImageId = () => `product-form-image-${(imageIdSeq += 1)}`;
 
@@ -71,9 +77,7 @@ interface UseProductFormInitial {
  * - AI 자동 채우기는 비어 있는 대상 필드만 채운다 (사용자 입력값 미덮어쓰기)
  */
 export const useProductForm = (initial?: UseProductFormInitial) => {
-  const [values, setValues] = useState<ProductFormValues>(
-    initial?.values ?? EMPTY_FORM_VALUES,
-  );
+  const [values, setValues] = useState<ProductFormValues>(initial?.values ?? EMPTY_FORM_VALUES);
   const [images, setImages] = useState<ProductFormImage[]>(() =>
     (initial?.imageUrls ?? []).map((url) => ({
       id: nextImageId(),
@@ -143,7 +147,26 @@ export const useProductForm = (initial?: UseProductFormInitial) => {
     setImages((prev) => [...added, ...prev]);
     imagesRef.current = [...added, ...imagesRef.current];
 
-    // TODO: 실제 업로드 연동 시 XHR progress 이벤트로 교체
+    if (!USE_MOCK_API) {
+      // 실연동: XHR 업로드 진행률을 그대로 카드에 반영한다. 실패한 카드는 뺀다.
+      const patchImage = (id: string, patch: Partial<ProductFormImage>) =>
+        setImages((prev) =>
+          prev.map((image) => (image.id === id ? { ...image, ...patch } : image)),
+        );
+      added.forEach((image, index) => {
+        uploadImage(files[index], (ratio) => patchImage(image.id, { uploadProgress: ratio }))
+          .then((uploaded) =>
+            patchImage(image.id, { uploadProgress: null, serverUrl: uploaded.url }),
+          )
+          .catch(() => {
+            URL.revokeObjectURL(image.url);
+            setImages((prev) => prev.filter((item) => item.id !== image.id));
+          });
+      });
+      return;
+    }
+
+    // 목: 0.8초 동안 프로그레스를 채운다
     const uploadingIds = new Set(added.map((image) => image.id));
     const startedAt = Date.now();
     const timer = setInterval(() => {
@@ -155,9 +178,7 @@ export const useProductForm = (initial?: UseProductFormInitial) => {
       }
       setImages((prev) =>
         prev.map((image) =>
-          uploadingIds.has(image.id)
-            ? { ...image, uploadProgress: done ? null : ratio }
-            : image,
+          uploadingIds.has(image.id) ? { ...image, uploadProgress: done ? null : ratio } : image,
         ),
       );
     }, UPLOAD_TICK_MS);
@@ -176,9 +197,17 @@ export const useProductForm = (initial?: UseProductFormInitial) => {
   const runAiFill = useCallback(async () => {
     setAiLoading(true);
     try {
-      const result = await requestAiFill();
       const current = valuesRef.current;
-      const emptyFields = AI_FILL_FIELDS.filter((field) => !current[field].trim());
+      const result = await requestAiFill({
+        name: current.name,
+        category: current.category,
+        description: current.description,
+        sellingPoints: current.sellingPoints,
+        mainTarget: current.mainTarget,
+        imageUrls: serverUrlsOf(imagesRef.current),
+      });
+      const latest = valuesRef.current;
+      const emptyFields = AI_FILL_FIELDS.filter((field) => !latest[field].trim() && result[field]);
       if (emptyFields.length > 0) {
         setValues((prev) => {
           const next = { ...prev };
@@ -222,6 +251,8 @@ export const useProductForm = (initial?: UseProductFormInitial) => {
     values,
     setValue,
     images,
+    /** 실연동: 업로드가 끝난 서버 이미지 주소 (최신이 앞) */
+    uploadedImageUrls: serverUrlsOf(images),
     addImages,
     removeImage,
     aiFilledFields,

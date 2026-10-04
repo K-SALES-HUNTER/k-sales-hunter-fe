@@ -1,6 +1,9 @@
 import { useMemo, useState } from 'react';
 import styled from '@emotion/styled';
+import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
+import { USE_MOCK_API } from '@/apis/config';
+import { updateDetailContent, uploadDetailImage } from '@/apis/sales';
 import Button from '@/components/common/Button';
 import CtaChevron from '@/components/common/CtaChevron';
 import Modal from '@/components/common/Modal';
@@ -197,10 +200,18 @@ const DetailBody = ({
   // 텍스트 수정 결과 (한국어 검수본에 반영, 저장 시 미리보기 즉시 갱신)
   const [editedName, setEditedName] = useState(content.ko.name);
   const [editedDesc, setEditedDesc] = useState(content.ko.description);
-  /** 상세 페이지에서는 피그마 명세대로 상품명·상세 설명만 직접 수정한다. */
+  const queryClient = useQueryClient();
+  /**
+   * 상세 페이지에서는 피그마 명세대로 상품명·상세 설명만 직접 수정한다.
+   * 실연동: PATCH 로 저장하고, 서버가 다시 옮긴 현지어본으로 캐시를 갱신한다.
+   */
   const handleSaveText = (draft: { name: string; description: string }) => {
     setEditedName(draft.name);
     setEditedDesc(draft.description);
+    if (USE_MOCK_API) return;
+    void updateDetailContent(productId, countryCode, draft).then((updated) => {
+      if (updated) queryClient.setQueryData(['sales', 'detail', productId, countryCode], updated);
+    });
   };
 
   // 상품 대표 이미지 — 삭제로 사라졌으면 첫 이미지로 자동 승격
@@ -238,9 +249,17 @@ const DetailBody = ({
     const isProduct = target === 'product';
     const key = isProduct ? productImageKey : detailImageStoreKey;
     const nextIndex = (isProduct ? images.length : detailImages.length) + 1;
+    const label = isProduct ? `업로드 ${nextIndex}` : `상세 이미지 ${nextIndex}`;
+    if (!USE_MOCK_API) {
+      // 실연동: 서버 목록에 추가되므로 다시 읽기만 한다 (AI 생성의 참고 사진으로도 쓰인다)
+      void uploadDetailImage(productId, countryCode, target, file).then(() =>
+        queryClient.invalidateQueries({ queryKey: ['sales', 'detail', productId, countryCode] }),
+      );
+      return;
+    }
     addImage(key, {
       id: `upload-${target}-${Date.now()}`,
-      label: isProduct ? `업로드 ${nextIndex}` : `상세 이미지 ${nextIndex}`,
+      label,
       src: URL.createObjectURL(file),
     });
   };

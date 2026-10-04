@@ -1,12 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import styled from '@emotion/styled';
 import salesCheckIcon from '@/assets/icons/sales-check.svg';
 import InputSet from '@/components/common/InputSet';
-import {
-  appliedCostBadgesMock,
-  marginBasisMock,
-  type PriceScenario,
-} from '@/mocks/sales';
+import { appliedCostBadgesMock, marginBasisMock, type PriceScenario } from '@/mocks/sales';
 import { Card, CardTitle, NoticeBox, StatBox, StatGrid, StatLabel, StatValue } from './ui';
 
 interface PriceSectionProps {
@@ -15,18 +11,44 @@ interface PriceSectionProps {
   /** 선택된 배송 방식의 개당 배송비(원) — 변경 시 수익 지표 즉시 재계산 */
   shippingCostKrw: number;
   scenarios: PriceScenario[];
+  /** 실연동: 서버 요율표 기준 계산 기준. 없으면 목 기준(베트남)으로 계산한다 */
+  basis?: PriceBasis;
+  /** 실연동: 서버가 준 반영 비용 뱃지 */
+  appliedBadges?: readonly string[];
+  /** 선택한 가격안·최종 판매가가 바뀔 때 — 판매 정보 저장(PUT)에 쓴다 */
+  onChange?: (value: { selectedTier: string; finalPrice: number }) => void;
 }
+
+/** 수익 계산 기준 — 관세·수입 VAT 는 CIF 기준, Shopee 수수료는 판매가 기준 */
+export interface PriceBasis {
+  dutyRate: number;
+  vatRate: number;
+  shopeeFeeRate: number;
+  fixedCostKrw: number;
+}
+
+const MOCK_BASIS: PriceBasis = {
+  dutyRate: marginBasisMock.dutyRate,
+  vatRate: marginBasisMock.importVatRate,
+  shopeeFeeRate: marginBasisMock.shopeeFeeRate,
+  fixedCostKrw: marginBasisMock.fixedCostKrw,
+};
 
 /**
  * 개당 순이익 — 국가별 보고서의 비용 차감 구조와 같은 순서로 계산한다.
  * 관세·수입 VAT는 CIF(공급 원가 + 국제 배송비) 기준, Shopee 수수료만 판매가 기준이다.
  * 수수료는 화면 표기와 어긋나지 않도록 십원 단위로 반올림한다.
  */
-const calcUnitProfit = (price: number, costPrice: number, shippingKrw: number) => {
+const calcUnitProfit = (
+  price: number,
+  costPrice: number,
+  shippingKrw: number,
+  basis: PriceBasis = MOCK_BASIS,
+) => {
   const cif = costPrice + shippingKrw;
-  const duty = cif * marginBasisMock.dutyRate;
-  const importVat = (cif + duty) * marginBasisMock.importVatRate;
-  const shopeeFee = Math.round((price * marginBasisMock.shopeeFeeRate) / 10) * 10;
+  const duty = cif * basis.dutyRate;
+  const importVat = (cif + duty) * basis.vatRate;
+  const shopeeFee = Math.round((price * basis.shopeeFeeRate) / 10) * 10;
   return Math.round(price - costPrice - shippingKrw - duty - importVat - shopeeFee);
 };
 
@@ -36,7 +58,14 @@ const formatPrice = (value: number) => `₩${value.toLocaleString()}`;
  * 판매가 섹션 (SEL-01-01 #6~9) — 가격 3안 → 최종 판매가 → 수익 지표.
  * 가격안 선택·최종가 수정·배송 방식 변경 시 하단 지표를 즉시 재계산한다.
  */
-const PriceSection = ({ costPrice, shippingCostKrw, scenarios }: PriceSectionProps) => {
+const PriceSection = ({
+  costPrice,
+  shippingCostKrw,
+  scenarios,
+  basis = MOCK_BASIS,
+  appliedBadges = appliedCostBadgesMock,
+  onChange,
+}: PriceSectionProps) => {
   const recommended = scenarios.find((s) => s.recommended) ?? scenarios[0];
   const [selectedId, setSelectedId] = useState(recommended?.id);
   const [finalPriceRaw, setFinalPriceRaw] = useState(String(recommended?.price ?? ''));
@@ -44,15 +73,21 @@ const PriceSection = ({ costPrice, shippingCostKrw, scenarios }: PriceSectionPro
   const finalPrice = Number(finalPriceRaw.replace(/[^0-9]/g, '')) || 0;
   const belowCost = finalPrice > 0 && finalPrice <= costPrice;
 
-  const unitProfit = finalPrice > 0 ? calcUnitProfit(finalPrice, costPrice, shippingCostKrw) : null;
+  const unitProfit =
+    finalPrice > 0 ? calcUnitProfit(finalPrice, costPrice, shippingCostKrw, basis) : null;
   const marginRate = unitProfit !== null && finalPrice > 0 ? (unitProfit / finalPrice) * 100 : null;
+  // 고정비가 없으면(서버 0) 손익분기를 셀 수 없다 — "—" 로 둔다
   const bepQty =
-    unitProfit !== null && unitProfit > 0
-      ? Math.ceil(marginBasisMock.fixedCostKrw / unitProfit)
+    unitProfit !== null && unitProfit > 0 && basis.fixedCostKrw > 0
+      ? Math.ceil(basis.fixedCostKrw / unitProfit)
       : null;
 
   // 가격안에서 그대로 들어온 값이면 'AI가채움'(그라데이션), 직접 타이핑하면 사용자 입력으로 승격
   const priceFromScenario = scenarios.some((s) => s.price === finalPrice);
+
+  useEffect(() => {
+    onChange?.({ selectedTier: selectedId ?? 'mid', finalPrice });
+  }, [selectedId, finalPrice, onChange]);
 
   const selectScenario = (scenario: PriceScenario) => {
     setSelectedId(scenario.id);
@@ -66,7 +101,7 @@ const PriceSection = ({ costPrice, shippingCostKrw, scenarios }: PriceSectionPro
 
       <ScenarioRow>
         {scenarios.map((scenario) => {
-          const profit = calcUnitProfit(scenario.price, costPrice, shippingCostKrw);
+          const profit = calcUnitProfit(scenario.price, costPrice, shippingCostKrw, basis);
           const rate = ((profit / scenario.price) * 100).toFixed(1);
           const selected = selectedId === scenario.id;
           return (
@@ -103,8 +138,8 @@ const PriceSection = ({ costPrice, shippingCostKrw, scenarios }: PriceSectionPro
       {/* Figma 12:14476 안내 문구 */}
       {unitProfit !== null && (
         <NoticeBox>
-          {formatPrice(finalPrice)}에 판매할 경우, 관세·현지 부가세·국제 배송비·Shopee 수수료를
-          모두 제외하고 상품 1개당 약 {formatPrice(unitProfit)}의 순이익이 예상됩니다.
+          {formatPrice(finalPrice)}에 판매할 경우, 관세·현지 부가세·국제 배송비·Shopee 수수료를 모두
+          제외하고 상품 1개당 약 {formatPrice(unitProfit)}의 순이익이 예상됩니다.
         </NoticeBox>
       )}
 
@@ -125,7 +160,7 @@ const PriceSection = ({ costPrice, shippingCostKrw, scenarios }: PriceSectionPro
 
       {/* 반영 비용 뱃지 — 어떤 비용이 계산에 포함됐는지 검증 (R-002-08) */}
       <BadgeRow>
-        {appliedCostBadgesMock.map((badge) => (
+        {appliedBadges.map((badge) => (
           <CostBadge key={badge}>
             <img src={salesCheckIcon} alt="" aria-hidden />
             {badge}
@@ -154,7 +189,9 @@ const ScenarioCard = styled.button<{ $selected: boolean }>`
     ${({ theme, $selected }) => ($selected ? theme.colors.primary : theme.colors.border)};
   background: ${({ theme, $selected }) =>
     $selected ? theme.colors.primaryLight : theme.colors.surface};
-  transition: border-color 120ms ease-out, background 120ms ease-out;
+  transition:
+    border-color 120ms ease-out,
+    background 120ms ease-out;
 
   &:hover {
     border-color: ${({ theme }) => theme.colors.primary};

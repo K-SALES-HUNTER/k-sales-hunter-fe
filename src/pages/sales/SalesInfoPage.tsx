@@ -1,6 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import styled from '@emotion/styled';
+import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
+import { USE_MOCK_API } from '@/apis/config';
+import { createDetailPage, saveSalesInfo } from '@/apis/sales';
 import Button from '@/components/common/Button';
 import CtaChevron from '@/components/common/CtaChevron';
 import ProductShell from '@/components/layout/ProductShell';
@@ -9,7 +12,7 @@ import { useSalesInfo } from '@/hooks/useSales';
 import { shippingMethodsMock, type ShippingMethodId } from '@/mocks/sales';
 import { buildPath } from '@/routes/paths';
 import { useDemoProgressStore } from '@/stores/useDemoProgressStore';
-import OptionStockSection from './components/OptionStockSection';
+import OptionStockSection, { type OptionStockDraft } from './components/OptionStockSection';
 import PriceSection from './components/PriceSection';
 import SectionTabs from './components/SectionTabs';
 import ShippingSection from './components/ShippingSection';
@@ -42,9 +45,33 @@ const SalesInfoPage = () => {
 
   const { data: product } = useProduct(productId);
   const { data: salesInfo } = useSalesInfo(productId, countryCode);
+  const queryClient = useQueryClient();
 
-  // 배송 방식 — AI 추천 기본 선택. 변경 시 판매가 섹션 수익 지표 재계산
-  const [shippingMethod, setShippingMethod] = useState<ShippingMethodId>(AI_RECOMMENDED_METHOD);
+  // 배송 방식 — AI 추천 기본 선택 (실연동은 서버 추천). 변경 시 판매가 섹션 수익 지표 재계산
+  const [pickedMethod, setShippingMethod] = useState<ShippingMethodId | null>(null);
+  const serverRecommended = USE_MOCK_API
+    ? undefined
+    : salesInfo?.shippingMethods.find((m) => m.aiRecommended)?.id;
+  const shippingMethod = pickedMethod ?? serverRecommended ?? AI_RECOMMENDED_METHOD;
+
+  /** 판매가 섹션의 현재 선택 — 판매 정보 저장(PUT)에 합친다 */
+  const priceRef = useRef({ selectedTier: 'mid', finalPrice: 0 });
+  const handlePriceChange = useCallback((value: { selectedTier: string; finalPrice: number }) => {
+    priceRef.current = value;
+  }, []);
+
+  /** 실연동: 재고 단계 저장 시 판매 정보 전체를 한 번에 확정한다 (API 스펙 §5-7) */
+  const submitSalesInfo = useCallback(
+    async (draft: OptionStockDraft) => {
+      await saveSalesInfo(productId, countryCode, {
+        ...draft,
+        ...priceRef.current,
+        shippingMethod,
+      });
+      await queryClient.invalidateQueries({ queryKey: ['products'] });
+    },
+    [productId, countryCode, shippingMethod, queryClient],
+  );
 
   // 옵션·재고 섹션의 재고 저장 여부 — 재고까지 저장해야 '상세 페이지 생성' CTA가 활성화된다
   const [stockSaved, setStockSaved] = useState(false);
@@ -56,17 +83,27 @@ const SalesInfoPage = () => {
   const markSalesInfoSaved = useDemoProgressStore((s) => s.markSalesInfoSaved);
   const handleSaved = () => markSalesInfoSaved(productId, countryCode);
 
-  // [DEMO-ONLY] 상세 페이지 생성 (Figma 12:14476 헤더 우측 CTA) — 1.5초 로딩 후 상세 페이지로 이동
+  // 상세 페이지 생성 (Figma 12:14476 헤더 우측 CTA)
+  // 목: 1.5초 로딩 후 이동 [DEMO-ONLY] / 실연동: 생성 잡이 끝날 때까지 폴링한 뒤 이동
   const markDetailPageCreated = useDemoProgressStore((s) => s.markDetailPageCreated);
   const [generating, setGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
   useEffect(() => {
     if (!generating || !countryCode) return;
-    const timer = setTimeout(() => {
-      markDetailPageCreated(productId, countryCode);
-      navigate(buildPath.detailPage(productId, countryCode));
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, [generating, productId, countryCode, navigate, markDetailPageCreated]);
+    const controller = new AbortController();
+    createDetailPage(productId, countryCode, controller.signal)
+      .then(async () => {
+        if (USE_MOCK_API) markDetailPageCreated(productId, countryCode);
+        else await queryClient.invalidateQueries({ queryKey: ['products'] });
+        navigate(buildPath.detailPage(productId, countryCode));
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+        setGenerating(false);
+        setGenerateError('상세 페이지를 만들지 못했어요. 잠시 후 다시 시도해 주세요.');
+      });
+    return () => controller.abort();
+  }, [generating, productId, countryCode, navigate, markDetailPageCreated, queryClient]);
 
   if (!product) return <LoadingText>판매 정보를 불러오는 중…</LoadingText>;
 
@@ -105,6 +142,7 @@ const SalesInfoPage = () => {
               navigate(buildPath.detailPage(productId, countryCode));
               return;
             }
+            setGenerateError(null);
             setGenerating(true);
           }}
         >
@@ -115,6 +153,7 @@ const SalesInfoPage = () => {
       <TitleRow>
         <PageTitle>판매 정보 입력</PageTitle>
         {ctaLocked && <CtaHint>{CTA_LOCK_HINT}</CtaHint>}
+        {generateError && <CtaHint role="alert">{generateError}</CtaHint>}
       </TitleRow>
       <SectionTabs
         tabs={[
@@ -129,10 +168,31 @@ const SalesInfoPage = () => {
           costPrice={product.costPrice}
           shippingCostKrw={shippingCostKrw}
           scenarios={salesInfo.priceScenarios}
+          basis={salesInfo.marginBasis}
+          appliedBadges={salesInfo.appliedBadges}
+          onChange={handlePriceChange}
         />
       )}
 
-      <OptionStockSection onSaved={handleSaved} onStockSaved={setStockSaved} />
+      {USE_MOCK_API ? (
+        <OptionStockSection onSaved={handleSaved} onStockSaved={setStockSaved} />
+      ) : (
+        /* 실연동: AI 추천값이 와야 초기값을 채울 수 있어 응답 뒤에 그린다 */
+        salesInfo?.shopeeCategoryDefault !== undefined && (
+          <OptionStockSection
+            suggestion={{
+              shopeeCategoryOptions: salesInfo.shopeeCategoryOptions ?? [],
+              shopeeCategoryDefault: salesInfo.shopeeCategoryDefault,
+              categoryAttrs: salesInfo.categoryAttrs ?? [],
+              optionLevel1: salesInfo.optionLevel1 ?? null,
+              optionLevel2: salesInfo.optionLevel2 ?? null,
+              stockHint: salesInfo.stockHint ?? '',
+            }}
+            onSubmit={submitSalesInfo}
+            onStockSaved={setStockSaved}
+          />
+        )
+      )}
 
       <ShippingSection
         methods={methods}
