@@ -1,11 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import styled from '@emotion/styled';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import type { GeneratedImage } from '@/apis/detailImage';
+import { useQueryClient } from '@tanstack/react-query';
+import { USE_MOCK_API } from '@/apis/config';
+import { cancelImageGeneration, saveGeneratedImage, type GeneratedImage } from '@/apis/detailImage';
+import { uploadImage } from '@/apis/productForm';
 import Button from '@/components/common/Button';
 import ProductShell from '@/components/layout/ProductShell';
 import { useGenerateImage } from '@/hooks/useDetailImage';
 import { useProduct } from '@/hooks/useProducts';
+import { useDetailContent } from '@/hooks/useSales';
 import {
   baseModelsMock,
   doneNoticeMock,
@@ -40,6 +44,8 @@ const RECOMMENDED_PROMPTS = [
 const PROGRESS_TICK_MS = 100;
 /** 완료 전까지 진행 바가 도달할 최대치 (응답을 받고 100%로 채운다) */
 const PROGRESS_CAP = 0.95;
+/** 진행 바를 채우는 기준 시간 — 목은 1.8초, 실연동은 안내 문구의 예상 시간(약 25초) */
+const PROGRESS_DURATION_MS = USE_MOCK_API ? GENERATE_DURATION_MS : GENERATE_ETA_SECONDS * 1000;
 
 type GenerateStep = 'idle' | 'generating' | 'done';
 
@@ -97,6 +103,11 @@ const GenerateBody = ({ productId, countryCode, target, regenerateId }: Generate
   const addedCount = useDetailImageStore((state) => state.addedByKey[storeKey]?.length ?? 0);
 
   const { mutate, reset } = useGenerateImage();
+  const queryClient = useQueryClient();
+
+  // 실연동: 참고 사진 후보는 상세 페이지의 상품 이미지 (서버가 아는 id 여야 생성 요청에 쓸 수 있다)
+  const { data: detail } = useDetailContent(productId, countryCode);
+  const ownedPhotos = USE_MOCK_API ? referencePhotosMock : (detail?.productImages ?? []);
 
   // ① 참고 사진 — 보유 사진 선택 + 추가 업로드
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -134,13 +145,25 @@ const GenerateBody = ({ productId, countryCode, target, regenerateId }: Generate
     if (step !== 'generating') return;
     const startedAt = Date.now();
     const timer = setInterval(() => {
-      const ratio = (Date.now() - startedAt) / GENERATE_DURATION_MS;
+      const ratio = (Date.now() - startedAt) / PROGRESS_DURATION_MS;
       setProgress(Math.min(ratio, PROGRESS_CAP));
     }, PROGRESS_TICK_MS);
     return () => clearInterval(timer);
   }, [step]);
 
   const handleUpload = (files: File[]) => {
+    if (!USE_MOCK_API) {
+      // 실연동: 서버에 올려 받은 id 를 참고 사진 id 로 쓴다
+      files.forEach((file) => {
+        void uploadImage(file).then((uploaded) =>
+          setUploads((prev) => [
+            ...prev,
+            { id: uploaded.id, src: uploaded.url, label: `레퍼런스 ${prev.length + 1}` },
+          ]),
+        );
+      });
+      return;
+    }
     // objectURL 생성은 상태 업데이터 밖에서 (StrictMode 이중 호출로 누수되지 않게)
     const entries = files.map((file, index) => {
       const src = URL.createObjectURL(file);
@@ -206,6 +229,7 @@ const GenerateBody = ({ productId, countryCode, target, regenerateId }: Generate
 
   const cancelGenerate = () => {
     runIdRef.current += 1;
+    void cancelImageGeneration();
     reset();
     setProgress(0);
     setStep('idle');
@@ -213,6 +237,19 @@ const GenerateBody = ({ productId, countryCode, target, regenerateId }: Generate
 
   const save = () => {
     if (!result) return;
+    if (!USE_MOCK_API) {
+      // 실연동: 서버 상세 페이지에 확정하고 다시 읽는다 (재생성은 원본 id 자리를 바꾼다)
+      void saveGeneratedImage(productId, countryCode, {
+        generatedImageId: result.id,
+        target,
+        replaceImageId: regenerateId,
+      })
+        .then(() =>
+          queryClient.invalidateQueries({ queryKey: ['sales', 'detail', productId, countryCode] }),
+        )
+        .then(() => navigate(buildPath.detailPage(productId, countryCode)));
+      return;
+    }
     const entry = {
       id: result.id,
       label:
@@ -248,7 +285,7 @@ const GenerateBody = ({ productId, countryCode, target, regenerateId }: Generate
       {step === 'done' && result && <ResultSection src={result.src} prompt={result.prompt} />}
 
       <ReferenceSection
-        photos={referencePhotosMock}
+        photos={ownedPhotos}
         selectedIds={selectedIds}
         onToggle={(id) =>
           setSelectedIds((prev) =>

@@ -668,6 +668,8 @@ const SpecTable = styled.table`
 const Description = styled.p`
   ${({ theme }) => theme.typography.body02};
   color: ${({ theme }) => theme.colors.textPrimary};
+  /* AI 본문은 소개·특징·혜택·구매유도 4단락을 빈 줄로 잇는다 */
+  white-space: pre-line;
 `;
 
 const DetailImageList = styled.div`
